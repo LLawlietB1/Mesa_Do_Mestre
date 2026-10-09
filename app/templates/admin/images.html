@@ -1,0 +1,37 @@
+{% extends 'base.html' %}
+{% import '_macros.html' as m %}
+{% block title %}Administração{% endblock %}
+{% block content %}
+<div class="page-head"><div><h1>Administração</h1><p class="muted">Liberação do envio de imagens por conta.</p></div></div>
+
+<section class="card card--accent">
+  <h2>Pedidos pendentes ({{ pending|length }})</h2>
+  {% for u in pending %}
+    <div class="list-row">
+      <span><strong>{{ u.name }}</strong> <span class="muted">{{ u.email }} · pedido em {{ u.images_requested_at | datahora }}</span></span>
+      {{ m.post_button(url_for('admin.approve', user_id=u.id), 'Liberar', cls='btn btn--primary btn--sm', icon_name='check') }}
+    </div>
+  {% else %}<p class="muted">Nenhum pedido pendente.</p>{% endfor %}
+</section>
+
+<section class="card">
+  <h2>Todas as contas</h2>
+  <div class="table-wrap"><table class="table table--stack">
+    <thead><tr><th>Conta</th><th>Papel</th><th>Imagens</th><th>Uso</th><th></th></tr></thead>
+    <tbody>
+    {% for u in users %}
+      <tr>
+        <td data-label="Conta">{{ u.name }}<br><span class="muted">{{ u.email }}</span></td>
+        <td data-label="Papel">{{ u.role }}</td>
+        <td data-label="Imagens">{{ 'liberado' if u.can_upload_images else 'bloqueado' }}</td>
+        <td data-label="Uso">{{ (usage[u.id] / 1024) | round(0) | int }} KB</td>
+        <td>
+          {% if u.images_enabled %}{{ m.post_button(url_for('admin.revoke', user_id=u.id), 'Revogar', confirm='Revogar o envio de imagens de ' ~ u.name ~ '? As imagens já enviadas continuam.') }}
+          {% elif not u.is_admin %}{{ m.post_button(url_for('admin.approve', user_id=u.id), 'Liberar') }}{% endif %}
+        </td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table></div>
+</section>
+{% endblock %}

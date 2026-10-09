@@ -1,11 +1,15 @@
 """Login, cadastro, recuperação de senha e conta do usuário."""
+from datetime import timedelta
 from urllib.parse import urlparse
 
-from flask import Blueprint, flash, g, redirect, render_template, request, session, url_for
+from flask import Blueprint, current_app, flash, g, redirect, render_template, request, session, url_for
+from markupsafe import escape
 
 from app.forms.auth import (ChangePasswordForm, DeleteAccountForm, LoginForm, RecoveryForm, RegisterForm,
                             ResetForm)
 from app.models import UserSession
+from app.models.mixins import utcnow
+from app.services.emailer import send_admin_email
 from app.services import auth as auth_service
 from app.services.auth import RegistrationError
 from app.services.common import safe_commit
@@ -123,6 +127,36 @@ def change_password():
             auth_service.clear_cookie(resp)
             return resp
     return _account_page(pw_form=form)
+
+
+@bp.post("/conta/imagens/pedir")
+def request_images():
+    """Pede ao administrador a liberação de upload de imagens (aviso por e-mail, como no Professor Helper)."""
+    user = g.user
+    if user.can_upload_images:
+        flash("O envio de imagens já está liberado para a sua conta.", "info")
+        return redirect(url_for("auth.account"))
+    cooldown = timedelta(minutes=current_app.config["IMAGE_REQUEST_COOLDOWN_MIN"])
+    if user.images_requested_at and utcnow() - user.images_requested_at < cooldown:
+        flash("Você já pediu a liberação há pouco. Aguarde um pouco antes de pedir de novo.", "info")
+        return redirect(url_for("auth.account"))
+    user.images_requested_at = utcnow()
+    if not safe_commit():
+        flash("Não foi possível registrar o pedido. Tente novamente.", "error")
+        return redirect(url_for("auth.account"))
+    link = url_for("admin.images", _external=True)
+    sent = send_admin_email(
+        "Mesa do Mestre — pedido de liberação de imagens",
+        f"<p><b>{escape(user.name)}</b> ({escape(user.email)}) pediu para usar o envio de imagens.</p>"
+        f'<p>Para aprovar: <a href="{escape(link)}">abra a página de administração</a>, ou rode '
+        f"<code>flask approve-images {escape(user.email)}</code>.</p>",
+    )
+    if sent:
+        flash("Pedido enviado! Você poderá enviar imagens assim que o administrador liberar.", "success")
+    else:
+        flash("Pedido registrado, mas não foi possível enviar o e-mail de aviso agora. Ele ainda será analisado; "
+              "você pode tentar reenviar mais tarde.", "warning")
+    return redirect(url_for("auth.account"))
 
 
 @bp.post("/conta/recuperacao")

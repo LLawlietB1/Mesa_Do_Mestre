@@ -1,4 +1,5 @@
 from flask import Blueprint, flash, redirect, render_template, request, url_for
+from sqlalchemy.orm import selectinload
 
 from app.constants import QUEST_STATUS, keys
 from app.extensions import db
@@ -29,7 +30,7 @@ def index(campaign):
         query = query.filter_by(status=status)
     if character_id:
         query = query.filter(Quest.characters.any(Character.id == character_id))
-    quests = query.order_by(Quest.updated_at.desc()).all()
+    quests = query.options(selectinload(Quest.objectives), selectinload(Quest.npc)).order_by(Quest.updated_at.desc()).all()
     return render_template("quests/index.html", quests=quests, q=q, status=status, character_id=character_id,
                            characters=character_choices(campaign.id))
 

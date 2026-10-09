@@ -50,6 +50,7 @@ Mesmo caminho do Professor Helper.
    | `SECRET_KEY` | **obrigatória** — `python -c "import secrets; print(secrets.token_hex(32))"` |
    | `INVITE_CODE` | **recomendada** — código que você passa aos amigos (sem ele, o cadastro fica fechado em produção) |
    | `USER_IMAGE_QUOTA_MB` | opcional (padrão 3) |
+   | `RESEND_API_KEY`, `ADMIN_EMAIL` | para o e-mail de pedido de liberação de imagens (ver abaixo) |
    | `TWILIO_*`, `MESSAGES_PER_DAY` | opcionais — só para envio direto (ver abaixo) |
 5. **Criar as tabelas** (uma vez, e a cada migration nova), do seu computador, apontando para o Neon com a conexão **direta** (`POSTGRES_URL_NON_POOLING` do painel do Neon/Vercel):
    ```powershell
@@ -63,6 +64,26 @@ Pontos de atenção na Vercel:
 - O disco é efêmero: por isso as imagens ficam **no banco** (tabela `file_assets`, com cota por conta) e o backup é um download.
 - Corpo de requisição/resposta limitado a ~4,5 MB: vale para upload de imagem e para backups (mantenha a cota baixa).
 - O plano gratuito do Neon tem 0,5 GB: mais que suficiente para algumas mesas.
+
+## Liberação do envio de imagens (e-mail ao administrador)
+
+Mesmo esquema do Professor Helper: para controlar o armazenamento, **cada conta nova começa sem poder enviar imagens**.
+
+1. A pessoa abre *Minha conta → Pedir liberação de imagens*. O sistema registra o pedido e **envia um e-mail ao administrador** (Resend).
+2. Você abre o link do e-mail (**/admin/imagens**) e clica em **Liberar** — ou roda `flask approve-images email@da-pessoa.com`.
+3. Os campos de imagem (retrato, capa, NPC) ficam desabilitados, com explicação, até a liberação. Admins sempre podem enviar.
+
+Configuração (Vercel → Environment Variables; pode reaproveitar a mesma conta Resend do Professor Helper):
+`RESEND_API_KEY`, `ADMIN_EMAIL` (sem domínio verificado o Resend só entrega para o e-mail da própria conta Resend), `RESEND_FROM` (opcional).
+Se o e-mail falhar, o pedido fica registrado e aparece em **Administração**.
+
+**Tornar a sua conta administradora** (uma vez, do seu PC, com `DATABASE_URL` apontando para o Neon): `flask make-admin seu@email.com`. Isso libera o menu *Administração*.
+
+## Desempenho
+
+- Cada página faz poucas consultas (orçamento verificado por teste: nenhuma página cresce com a quantidade de dados) e a conexão com o Postgres é reaproveitada entre requisições.
+- CSS/JS têm hash na URL e cache de 1 ano; o cabeçalho `Server-Timing` (DevTools → Network → Timing) mostra o tempo e o nº de consultas de cada requisição.
+- Dica importante: deixe a **região da função na Vercel igual à região do Neon** (Settings → Functions → Region). Banco e função em continentes diferentes custam dezenas de ms por consulta.
 
 ## Mensagens: WhatsApp e SMS
 

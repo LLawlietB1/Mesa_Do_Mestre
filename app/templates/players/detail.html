@@ -27,7 +27,7 @@
   </section>
   <section class="card">
     <h2>Personagens</h2>
-    {% for c in player.characters %}
+    {% for c in characters %}
       <a class="list-row" href="{{ url_for('characters.detail', character_id=c.id) }}"><span>{{ c.name }} <span class="muted">· {{ c.campaign.name }}</span></span>{{ m.badge('character_status', c.status) }}</a>
     {% else %}<p class="muted">Nenhum personagem.</p>{% endfor %}
   </section>

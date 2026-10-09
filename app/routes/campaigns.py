@@ -1,5 +1,6 @@
 from flask import Blueprint, flash, g, redirect, render_template, request, url_for
 from sqlalchemy import func
+from sqlalchemy.orm import selectinload
 
 from app.constants import CAMPAIGN_STATUS, keys
 from app.extensions import db
@@ -81,7 +82,7 @@ def detail(campaign_id):
     recent_sessions = GameSession.query.filter_by(campaign_id=campaign.id).order_by(GameSession.date.desc(), GameSession.number.desc()).limit(5).all()
     return render_template(
         "campaigns/detail.html", campaign=campaign, members=members, add_form=add_form,
-        characters=campaign.characters, stats=stats, recent_sessions=recent_sessions, has_available=bool(available),
+        characters=Character.query.filter_by(campaign_id=campaign.id).options(selectinload(Character.player)).order_by(Character.name).all(), stats=stats, recent_sessions=recent_sessions, has_available=bool(available),
     )
 
 

@@ -18,7 +18,7 @@
 
 <section class="card">
   <h2>Acontecimentos importantes</h2>
-  {% for e in session.events %}
+  {% for e in events %}
     <div class="list-row">
       <span>{{ e.description | texto }}{% if e.character %} <span class="badge">{{ e.character.name }}</span>{% endif %}</span>
       {{ m.post_button(url_for('sessions.delete_event', session_id=session.id, event_id=e.id), '', confirm='Remover este acontecimento?', icon_name='trash', title='Remover acontecimento') }}

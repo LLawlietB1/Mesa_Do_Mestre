@@ -20,6 +20,17 @@ class User(TimestampMixin, db.Model):
     locked_until = db.Column(db.DateTime)
     # Envio de mensagens pelo servidor consome crédito do provedor: liberado manualmente (flask grant-messaging).
     can_send_messages = db.Column(db.Boolean, nullable=False, default=False)
+    # Upload de imagens: liberado manualmente (controla o armazenamento do banco), como no Professor Helper.
+    images_enabled = db.Column(db.Boolean, nullable=False, default=False, server_default=db.false())
+    images_requested_at = db.Column(db.DateTime)
+
+    @property
+    def is_admin(self):
+        return self.role == "ADMIN"
+
+    @property
+    def can_upload_images(self):
+        return self.is_admin or self.images_enabled
 
     sessions = db.relationship("UserSession", back_populates="user", cascade="all, delete-orphan", passive_deletes=True)
 

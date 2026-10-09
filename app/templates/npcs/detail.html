@@ -23,7 +23,7 @@
 
 <section class="card">
   <h2>Relações com personagens</h2>
-  {% for r in npc.relationships %}
+  {% for r in relationships %}
     <div class="list-row">
       <span><a href="{{ url_for('characters.detail', character_id=r.character_id) }}">{{ r.character.name }}</a> <span class="badge">{{ rotulo('npc_relations', r.kind) }}</span> {{ r.description or '' }}</span>
       {{ m.post_button(url_for('npcs.delete_relationship', npc_id=npc.id, rel_id=r.id), '', confirm='Remover esta relação?', icon_name='trash', title='Remover relação') }}

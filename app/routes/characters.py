@@ -1,9 +1,10 @@
 from flask import Blueprint, flash, redirect, render_template, request, url_for
+from sqlalchemy.orm import joinedload, selectinload
 
 from app.constants import CHARACTER_STATUS, keys
 from app.extensions import db
 from app.forms.characters import CharacterForm
-from app.models import Character, CharacterItem, CharacterNPCRelationship, GameSession, Note, Player, Quest
+from app.models import Character, CharacterItem, ExperienceHistory, CharacterNPCRelationship, GameSession, Note, Player, Quest
 from app.models.session import session_participants
 from app.routes.helpers import assign, finalize_images, flash_form_errors, get_or_404, require_campaign
 from app.services.campaigns import enroll_player, player_choices_for_campaign
@@ -32,7 +33,7 @@ def index(campaign):
         query = query.filter_by(status=status)
     if player_id:
         query = query.filter_by(player_id=player_id)
-    characters = query.order_by(SORTS.get(sort, Character.name), Character.name).all()
+    characters = query.options(selectinload(Character.player)).order_by(SORTS.get(sort, Character.name), Character.name).all()
     players = Player.query.join(Character).filter(Character.campaign_id == campaign.id).distinct().order_by(Player.display_name).all()
     return render_template("characters/index.html", characters=characters, players=players, q=q, status=status,
                            player_id=player_id, sort=sort)
@@ -82,11 +83,11 @@ def detail(character_id):
     cid = character.id
     return render_template(
         "characters/detail.html", character=character,
-        history=character.xp_history[:8],
+        history=ExperienceHistory.query.filter_by(character_id=cid).order_by(ExperienceHistory.id.desc()).limit(8).all(),
         notes=Note.query.filter_by(character_id=cid, archived=False).order_by(Note.updated_at.desc()).limit(5).all(),
-        items=CharacterItem.query.filter_by(character_id=cid).all(),
+        items=CharacterItem.query.filter_by(character_id=cid).options(joinedload(CharacterItem.item)).all(),
         quests=Quest.query.filter(Quest.characters.any(Character.id == cid)).order_by(Quest.title).all(),
-        relations=CharacterNPCRelationship.query.filter_by(character_id=cid).all(),
+        relations=CharacterNPCRelationship.query.filter_by(character_id=cid).options(joinedload(CharacterNPCRelationship.npc)).all(),
         sessions=GameSession.query.filter(GameSession.participants.any(Character.id == cid)).order_by(GameSession.number.desc()).limit(8).all(),
     )
 

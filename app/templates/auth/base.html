@@ -5,15 +5,15 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block title %}Entrar{% endblock %} · Mesa do Mestre</title>
-  <link rel="icon" href="{{ url_for('static', filename='images/favicon.svg') }}" type="image/svg+xml">
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/polish.css') }}">
-  <script src="{{ url_for('static', filename='js/app.js') }}" defer></script>
+  <link rel="icon" href="{{ asset('images/favicon.svg') }}" type="image/svg+xml">
+  <link rel="stylesheet" href="{{ asset('css/app.css') }}">
+  <link rel="stylesheet" href="{{ asset('css/polish.css') }}">
+  <script src="{{ asset('js/app.js') }}" defer></script>
 </head>
 <body class="auth-body">
 <main class="auth" id="conteudo">
   <div class="auth__brand">
-    <img src="{{ url_for('static', filename='images/favicon.svg') }}" width="56" height="56" alt="">
+    <img src="{{ asset('images/favicon.svg') }}" width="56" height="56" alt="">
     <h1>Mesa do Mestre</h1>
     <p class="muted">Campanhas, jogadores, XP e sessões em um só lugar.</p>
   </div>

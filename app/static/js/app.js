@@ -81,14 +81,22 @@
   document.querySelectorAll(".stat__n").forEach((n) => { const v = Number(n.textContent); if (!isNaN(v)) { n.textContent = 0; tween(n, v, 900); } });
   document.querySelectorAll(".xp-list > .card").forEach((c, i) => c.style.setProperty("--i", Math.min(i, 12)));
 
-  // Brilho que acompanha o cursor nos cartões.
-  document.addEventListener("pointermove", (e) => {
-    const card = e.target.closest && e.target.closest(".card");
-    if (!card) return;
-    const r = card.getBoundingClientRect();
-    card.style.setProperty("--mx", (e.clientX - r.left) + "px");
-    card.style.setProperty("--my", (e.clientY - r.top) + "px");
-  }, { passive: true });
+  // Brilho que acompanha o cursor nos cartões (no máximo 1 atualização por quadro; desligado em telas de toque).
+  if (window.matchMedia("(hover: hover)").matches && !reduced) {
+    let frame = 0, last = null;
+    document.addEventListener("pointermove", (e) => {
+      last = e;
+      if (frame) return;
+      frame = requestAnimationFrame(() => {
+        frame = 0;
+        const card = last.target.closest && last.target.closest(".card");
+        if (!card) return;
+        const r = card.getBoundingClientRect();
+        card.style.setProperty("--mx", (last.clientX - r.left) + "px");
+        card.style.setProperty("--my", (last.clientY - r.top) + "px");
+      });
+    }, { passive: true });
+  }
 
   // Explosão de faíscas douradas ao completar 100%.
   function sparkle(root) {

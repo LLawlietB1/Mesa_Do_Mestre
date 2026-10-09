@@ -25,6 +25,17 @@
 </div>
 
 <section class="card">
+  <h2>Envio de imagens</h2>
+  {% if current_user.can_upload_images %}
+    <p>{{ m.badge('campaign_status', 'ativa') }} Liberado: você pode enviar retratos, capas e imagens de NPC.</p>
+  {% else %}
+    <p class="muted">Para controlar o armazenamento, o envio de imagens precisa ser liberado pelo administrador.
+      {% if current_user.images_requested_at %}Pedido enviado em <strong>{{ current_user.images_requested_at | datahora }}</strong>.{% endif %}</p>
+    {{ m.post_button(url_for('auth.request_images'), ('Pedir liberação novamente' if current_user.images_requested_at else 'Pedir liberação de imagens'), cls='btn btn--primary', icon_name='send') }}
+  {% endif %}
+</section>
+
+<section class="card">
   <h2>Sessões e mensagens</h2>
   <p class="muted">{{ sessions }} sessão(ões) de login ativa(s).
     Envio de mensagens pelo servidor: <strong>{{ 'liberado' if current_user.can_send_messages else 'não liberado (os links de WhatsApp/SMS funcionam normalmente)' }}</strong>.</p>

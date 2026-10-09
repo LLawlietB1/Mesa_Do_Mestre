@@ -12,6 +12,16 @@ class BaseForm(FlaskForm):
     class Meta:
         locales = ["pt"]
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        from app.services.uploads import NOT_ENABLED, uploads_allowed
+
+        if not uploads_allowed():   # sem liberação: campos de imagem ficam desabilitados e explicados
+            for field in self:
+                if isinstance(field, FileField):
+                    field.render_kw = {**(field.render_kw or {}), "disabled": True}
+                    field.description = NOT_ENABLED
+
 
 def required(msg="Campo obrigatório."):
     return DataRequired(message=msg)

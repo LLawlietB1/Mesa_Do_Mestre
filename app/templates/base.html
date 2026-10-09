@@ -6,10 +6,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="csrf-token" content="{{ csrf_token() }}">
   <title>{% block title %}{{ page_title|default('Painel') }}{% endblock %} · Mesa do Mestre</title>
-  <link rel="icon" href="{{ url_for('static', filename='images/favicon.svg') }}" type="image/svg+xml">
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/polish.css') }}">
-  <script src="{{ url_for('static', filename='js/app.js') }}" defer></script>
+  <link rel="icon" href="{{ asset('images/favicon.svg') }}" type="image/svg+xml">
+  <link rel="stylesheet" href="{{ asset('css/app.css') }}">
+  <link rel="stylesheet" href="{{ asset('css/polish.css') }}">
+  <script src="{{ asset('js/app.js') }}" defer></script>
 </head>
 <body>
 <a class="skip-link" href="#conteudo">Pular para o conteúdo</a>
@@ -32,7 +32,7 @@
 <div class="shell">
   <aside class="sidebar" id="sidebar" aria-label="Navegação principal">
     <div class="brand">
-      <img src="{{ url_for('static', filename='images/favicon.svg') }}" width="30" height="30" alt="">
+      <img src="{{ asset('images/favicon.svg') }}" width="30" height="30" alt="">
       <span>Mesa do Mestre</span>
     </div>
     <nav>
@@ -42,6 +42,9 @@
           {{ m.icon(ic) }}<span>{{ text }}</span>
         </a>
       {% endfor %}
+      {% if current_user and current_user.is_admin %}
+        <a href="{{ url_for('admin.images') }}" class="nav__link{% if request.blueprint == 'admin' %} is-active{% endif %}">{{ m.icon('lock', 18) }}<span>Administração</span></a>
+      {% endif %}
     </nav>
     <div class="sidebar__user">
       <a class="nav__link{% if request.blueprint == 'auth' %} is-active{% endif %}" href="{{ url_for('auth.account') }}">{{ m.icon('players', 18) }}<span>{{ current_user.name if current_user else 'Conta' }}</span></a>

@@ -1,7 +1,7 @@
 """Campanha atual (guardada na sessão do navegador) e participação de jogadores."""
 from __future__ import annotations
 
-from flask import session
+from flask import g, session
 
 from app.extensions import db
 from app.services.integrity import CampaignMismatchError
@@ -12,29 +12,42 @@ from app.services.ownership import is_owned, my_campaigns, my_players
 SESSION_KEY = "campaign_id"
 
 
+def reset_request_cache() -> None:
+    """Chamado no início de cada requisição (o `g` pode ser reaproveitado em testes/contextos longos)."""
+    for key in ("_campaigns", "_current", "_current_set"):
+        g.pop(key, None)
+
+
+def user_campaigns() -> list[Campaign]:
+    """Campanhas do usuário logado, numa única consulta por requisição (seletor do topo + campanha atual)."""
+    cached = g.get("_campaigns")
+    if cached is None:
+        cached = my_campaigns().order_by(Campaign.status == "encerrada", Campaign.name).all()
+        g._campaigns = cached
+    return cached
+
+
 def get_current_campaign() -> Campaign | None:
-    """Campanha selecionada; se não houver (ou foi apagada), escolhe a mais recente não encerrada."""
-    campaign = None
-    cid = session.get(SESSION_KEY)
-    if cid is not None:
-        campaign = db.session.get(Campaign, cid)
-    if campaign is not None and not is_owned(campaign):
-        campaign = None                       # id de outra conta guardado na sessão: ignora
+    """Campanha selecionada; se não houver (ou foi apagada), escolhe a mais recente não encerrada.
+    Sai da lista já carregada: ids de outra conta guardados na sessão simplesmente não existem nela."""
+    if g.get("_current_set"):
+        return g._current
+    campaigns = user_campaigns()
+    campaign = next((c for c in campaigns if c.id == session.get(SESSION_KEY)), None)
     if campaign is None:
-        mine = my_campaigns()
-        campaign = (
-            mine.filter(Campaign.status != "encerrada").order_by(Campaign.id.desc()).first()
-            or mine.order_by(Campaign.id.desc()).first()
-        )
+        pool = [c for c in campaigns if c.status != "encerrada"] or campaigns
+        campaign = max(pool, key=lambda c: c.id) if pool else None
         if campaign is not None:
             session[SESSION_KEY] = campaign.id
         else:
             session.pop(SESSION_KEY, None)
+    g._current, g._current_set = campaign, True
     return campaign
 
 
 def set_current_campaign(campaign: Campaign) -> None:
     session[SESSION_KEY] = campaign.id
+    g._current, g._current_set = campaign, True
 
 
 def enroll_player(campaign_id: int, player_id: int) -> CampaignPlayer:

@@ -1,4 +1,5 @@
 from flask import Blueprint, flash, redirect, render_template, request, url_for
+from sqlalchemy.orm import joinedload, selectinload
 
 from app.constants import ITEM_CATEGORIES, keys
 from app.extensions import db
@@ -31,7 +32,7 @@ def index(campaign):
         query = query.filter_by(category=category)
     if character_id:
         query = query.filter(Item.holdings.any(CharacterItem.character_id == character_id))
-    return render_template("items/index.html", items=query.order_by(Item.name).all(), q=q, category=category,
+    return render_template("items/index.html", items=query.options(selectinload(Item.holdings).selectinload(CharacterItem.character)).order_by(Item.name).all(), q=q, category=category,
                            character_id=character_id, characters=character_choices(campaign.id))
 
 
@@ -75,7 +76,9 @@ def new(campaign):
 def detail(item_id):
     item = get_or_404(Item, item_id)
     form = HoldingForm(characters=character_choices(item.campaign_id), quests=_quests(item.campaign_id))
-    return render_template("items/detail.html", item=item, holding_form=form)
+    holdings = (CharacterItem.query.filter_by(item_id=item.id)
+                .options(joinedload(CharacterItem.character), joinedload(CharacterItem.quest)).order_by(CharacterItem.id).all())
+    return render_template("items/detail.html", item=item, holding_form=form, holdings=holdings)
 
 
 @bp.route("/<int:item_id>/editar", methods=["GET", "POST"])

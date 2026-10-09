@@ -16,8 +16,8 @@ def test_normalize_database_url(raw, expected):
 
 def test_postgres_engine_options_are_serverless_safe():
     opts = engine_options("postgresql+psycopg://u:p@h/db")
-    assert opts["connect_args"] == {"prepare_threshold": None}
-    assert opts["poolclass"].__name__ == "NullPool"
+    assert opts["connect_args"]["prepare_threshold"] is None
+    assert opts["pool_pre_ping"] is True and opts["pool_recycle"] < 300 and opts["pool_size"] >= 1
     assert engine_options("sqlite:///x.db") == {}
 
 

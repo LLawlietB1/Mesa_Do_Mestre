@@ -3,6 +3,7 @@ from datetime import date
 from flask import Blueprint, flash, redirect, render_template, request, url_for
 from sqlalchemy import func
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm import selectinload
 
 from app.constants import SESSION_STATUS, keys
 from app.extensions import db
@@ -57,7 +58,9 @@ def index(campaign):
 @bp.get("/linha-do-tempo")
 @require_campaign
 def timeline(campaign):
-    sessions = GameSession.query.filter_by(campaign_id=campaign.id).order_by(GameSession.date, GameSession.number).all()
+    sessions = (GameSession.query.filter_by(campaign_id=campaign.id)
+                .options(selectinload(GameSession.events).selectinload(SessionEvent.character))
+                .order_by(GameSession.date, GameSession.number).all())
     return render_template("sessions/timeline.html", sessions=sessions, today=date.today())
 
 
@@ -126,7 +129,8 @@ def new(campaign):
 def detail(session_id):
     session = get_or_404(GameSession, session_id)
     event_form = SessionEventForm(characters=character_choices(session.campaign_id))
-    return render_template("sessions/detail.html", session=session, event_form=event_form)
+    events = SessionEvent.query.filter_by(session_id=session.id).options(selectinload(SessionEvent.character)).order_by(SessionEvent.id).all()
+    return render_template("sessions/detail.html", session=session, event_form=event_form, events=events)
 
 
 @bp.route("/<int:session_id>/editar", methods=["GET", "POST"])

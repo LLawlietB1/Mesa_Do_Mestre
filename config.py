@@ -28,10 +28,12 @@ def database_url() -> str:
 def engine_options(url: str) -> dict:
     if url.startswith("postgresql"):
         return {
-            # Serverless: cada invocação abre/fecha a própria conexão (o pooler do Neon/pgbouncer cuida do resto).
-            "poolclass": __import__("sqlalchemy.pool", fromlist=["NullPool"]).NullPool,
+            # Instâncias "quentes" da Vercel atendem várias requisições: reaproveitar a conexão evita o custo de
+            # TLS + autenticação (centenas de ms) em cada página. pre_ping/recycle descartam conexões que o
+            # Neon suspendeu por inatividade.
+            "pool_size": 1, "max_overflow": 2, "pool_pre_ping": True, "pool_recycle": 240,
             # pgbouncer em modo transação não suporta prepared statements automáticos do psycopg 3.
-            "connect_args": {"prepare_threshold": None},
+            "connect_args": {"prepare_threshold": None, "connect_timeout": 10},
         }
     return {}
 
@@ -77,6 +79,12 @@ class Config:
     MESSAGES_PER_DAY = int(os.environ.get("MESSAGES_PER_DAY", "30"))
     DEFAULT_COUNTRY_CODE = os.environ.get("DEFAULT_COUNTRY_CODE", "55")
     COOKIE_SECURE = False
+    # E-mail de aviso ao administrador (Resend). Sem domínio verificado, o Resend só envia para o e-mail da
+    # própria conta Resend: use esse mesmo e-mail em ADMIN_EMAIL.
+    RESEND_API_KEY = os.environ.get("RESEND_API_KEY", "")
+    RESEND_FROM = os.environ.get("RESEND_FROM", "Mesa do Mestre <onboarding@resend.dev>")
+    ADMIN_EMAIL = os.environ.get("ADMIN_EMAIL", "")
+    IMAGE_REQUEST_COOLDOWN_MIN = 30
 
     def __init__(self):
         url = database_url()
@@ -113,6 +121,7 @@ class TestingConfig(Config):
     ALLOW_OPEN_REGISTRATION = True
     INVITE_CODE = ""
     TWILIO_ACCOUNT_SID = TWILIO_AUTH_TOKEN = TWILIO_SMS_FROM = TWILIO_WHATSAPP_FROM = ""
+    RESEND_API_KEY = ADMIN_EMAIL = ""
 
     def __init__(self):
         super().__init__()

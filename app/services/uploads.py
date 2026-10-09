@@ -8,7 +8,6 @@ import re
 import uuid
 
 from flask import current_app, g
-from PIL import Image, ImageOps, UnidentifiedImageError
 from sqlalchemy import delete, func
 
 from app.extensions import db
@@ -18,7 +17,6 @@ ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg", "gif", "webp"}
 ALLOWED_FORMATS = {"PNG", "JPEG", "GIF", "WEBP"}
 SAFE_NAME = re.compile(r"^[0-9a-f]{32}$")
 MAX_DIMENSION = 800
-Image.MAX_IMAGE_PIXELS = 25_000_000      # protege contra "bombas de descompressão"
 
 
 class UploadError(ValueError):
@@ -27,6 +25,9 @@ class UploadError(ValueError):
 
 def process_image(data: bytes) -> tuple[bytes, str]:
     """Confere que é uma imagem de verdade e a recodifica em WEBP (sem EXIF, até 800 px)."""
+    from PIL import Image, ImageOps, UnidentifiedImageError   # import preguiçoso: acelera o início a frio
+
+    Image.MAX_IMAGE_PIXELS = 25_000_000      # protege contra "bombas de descompressão"
     try:
         probe = Image.open(io.BytesIO(data))
         if probe.format not in ALLOWED_FORMATS:
@@ -65,8 +66,18 @@ def used_bytes(owner_id: int) -> int:
     return db.session.query(func.coalesce(func.sum(FileAsset.size), 0)).filter(FileAsset.owner_id == owner_id).scalar() or 0
 
 
+NOT_ENABLED = "O envio de imagens ainda não foi liberado para a sua conta. Solicite a liberação em «Minha conta»."
+
+
+def uploads_allowed() -> bool:
+    user = getattr(g, "user", None)
+    return bool(user and user.can_upload_images)
+
+
 def save_image(storage) -> str:
     """Valida, recodifica e adiciona a imagem à sessão do banco (o commit é de quem chama)."""
+    if not uploads_allowed():                      # defesa em profundidade: o formulário já desabilita o campo
+        raise UploadError(NOT_ENABLED)
     data, ctype = validate_image(storage)
     quota = current_app.config["USER_IMAGE_QUOTA_BYTES"]
     if used_bytes(g.user.id) + len(data) > quota:

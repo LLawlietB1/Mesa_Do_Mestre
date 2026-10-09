@@ -1,5 +1,6 @@
 from flask import Blueprint, flash, redirect, render_template, request, url_for
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm import joinedload
 
 from app.constants import NPC_STATUS, keys
 from app.extensions import db
@@ -64,7 +65,9 @@ def detail(npc_id):
     rel_form = RelationshipForm(characters=character_choices(npc.campaign_id))
     sessions = GameSession.query.filter(GameSession.npcs.any(NPC.id == npc.id)).order_by(GameSession.number.desc()).all()
     quests = Quest.query.filter((Quest.npc_id == npc.id)).order_by(Quest.title).all()
-    return render_template("npcs/detail.html", npc=npc, rel_form=rel_form, sessions=sessions, quests=quests)
+    relationships = (CharacterNPCRelationship.query.filter_by(npc_id=npc.id)
+                     .options(joinedload(CharacterNPCRelationship.character)).order_by(CharacterNPCRelationship.id).all())
+    return render_template("npcs/detail.html", npc=npc, rel_form=rel_form, sessions=sessions, quests=quests, relationships=relationships)
 
 
 @bp.route("/<int:npc_id>/editar", methods=["GET", "POST"])

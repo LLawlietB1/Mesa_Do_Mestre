@@ -31,6 +31,28 @@ def register_cli(app):
         db.session.commit()
         click.echo(f"Envio pelo servidor {'revogado' if revoke else 'liberado'} para {user.email}.")
 
+    @app.cli.command("approve-images")
+    @click.argument("email")
+    @click.option("--revoke", is_flag=True, help="Remove a liberação.")
+    def approve_images(email, revoke):
+        """Libera (ou revoga) o envio de imagens para uma conta (equivale ao botão em /admin/imagens)."""
+        user = _user(email)
+        user.images_enabled = not revoke
+        if not revoke:
+            user.images_requested_at = None
+        db.session.commit()
+        click.echo(f"Envio de imagens {'revogado' if revoke else 'liberado'} para {user.email}.")
+
+    @app.cli.command("make-admin")
+    @click.argument("email")
+    @click.option("--revoke", is_flag=True, help="Volta a conta para o papel comum.")
+    def make_admin(email, revoke):
+        """Torna uma conta administradora (acesso a /admin e envio de imagens sempre liberado)."""
+        user = _user(email)
+        user.role = "MESTRE" if revoke else "ADMIN"
+        db.session.commit()
+        click.echo(f"{user.email} agora é {user.role}.")
+
     @app.cli.command("seed-demo")
     @click.argument("email")
     @click.option("--yes", is_flag=True, help="Confirma a criação de dados de demonstração.")

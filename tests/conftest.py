@@ -39,7 +39,10 @@ def db(app):
 
 
 def _make_user(name, email):
-    return auth_service.register_user(name, email, PASSWORD, "palavra secreta")
+    u = auth_service.register_user(name, email, PASSWORD, "palavra secreta")
+    u.images_enabled = True          # por padrão liberado; os testes de bloqueio desligam explicitamente
+    _db.session.commit()
+    return u
 
 
 @pytest.fixture()

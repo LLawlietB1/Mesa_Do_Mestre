@@ -1,6 +1,7 @@
 from datetime import date
 
 from flask import Blueprint, render_template
+from sqlalchemy.orm import selectinload
 
 from app.models import Campaign, CampaignPlayer, Character, GameSession, Note, Player, Quest, SessionEvent
 from app.services.campaigns import get_current_campaign
@@ -21,7 +22,8 @@ def index():
         .filter(CampaignPlayer.campaign_id == cid, CampaignPlayer.status == "ativo", Player.status == "ativo")
         .count()
     )
-    party = Character.query.filter_by(campaign_id=cid, status="ativo").order_by(Character.name).all()
+    party = (Character.query.filter_by(campaign_id=cid, status="ativo").options(selectinload(Character.player))
+             .order_by(Character.name).all())
     stats = {
         "campaigns": total,
         "players": active_players,
@@ -33,6 +35,7 @@ def index():
         .order_by(GameSession.date, GameSession.number).first()
     )
     notes = Note.query.filter_by(campaign_id=cid, archived=False).order_by(Note.important.desc(), Note.updated_at.desc()).limit(5).all()
-    events = SessionEvent.query.filter_by(campaign_id=cid).order_by(SessionEvent.id.desc()).limit(6).all()
+    events = (SessionEvent.query.filter_by(campaign_id=cid).options(selectinload(SessionEvent.session), selectinload(SessionEvent.character))
+              .order_by(SessionEvent.id.desc()).limit(6).all())
     return render_template("dashboard/index.html", campaign=campaign, stats=stats, party=party,
                            next_session=next_session, notes=notes, events=events)

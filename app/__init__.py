@@ -1,9 +1,12 @@
 """Fábrica da aplicação Mesa do Mestre."""
+import hashlib
 import logging
 import os
 import sqlite3
+import time
+from pathlib import Path
 
-from flask import Flask, g, jsonify, redirect, render_template, request, url_for
+from flask import Flask, g, has_request_context, jsonify, redirect, render_template, request, url_for
 from flask_wtf.csrf import CSRFError
 from sqlalchemy import event
 from sqlalchemy.exc import OperationalError, ProgrammingError
@@ -12,7 +15,7 @@ from werkzeug.exceptions import HTTPException
 from werkzeug.middleware.proxy_fix import ProxyFix
 
 from app import constants
-from app.extensions import csrf, db, migrate
+from app.extensions import csrf, db
 from app.utils import fmt_date, fmt_datetime, multiline
 from config import CONFIGS, env_name
 
@@ -26,6 +29,19 @@ def _sqlite_pragmas(dbapi_connection, _record):
         cur = dbapi_connection.cursor()
         cur.execute("PRAGMA foreign_keys=ON")
         cur.close()
+
+
+@event.listens_for(Engine, "before_cursor_execute")
+def _query_start(conn, cursor, statement, parameters, context, executemany):
+    if has_request_context():
+        conn.info.setdefault("_qt", []).append(time.perf_counter())
+
+
+@event.listens_for(Engine, "after_cursor_execute")
+def _query_end(conn, cursor, statement, parameters, context, executemany):
+    if has_request_context() and conn.info.get("_qt"):
+        g.db_ms = g.get("db_ms", 0.0) + (time.perf_counter() - conn.info["_qt"].pop()) * 1000
+        g.db_n = g.get("db_n", 0) + 1
 
 
 def create_app(config_name=None, test_config=None):
@@ -48,8 +64,12 @@ def create_app(config_name=None, test_config=None):
     db.init_app(app)
     if app.config.get("CONFIG_ERROR"):
         return _config_error_app(app)         # configuração inválida: explica em vez de um "500" mudo
-    # render_as_batch: necessário para ALTER TABLE no SQLite (no Postgres é transparente)
-    migrate.init_app(app, db, render_as_batch=True, compare_type=True)
+    if not os.environ.get("VERCEL"):
+        # Migrations só rodam fora da Vercel (do seu PC): evita importar o Alembic a cada início a frio.
+        from flask_migrate import Migrate
+
+        # render_as_batch: necessário para ALTER TABLE no SQLite (no Postgres é transparente)
+        Migrate(app, db, render_as_batch=True, compare_type=True)
     csrf.init_app(app)
 
     from app import models  # noqa: F401  (registra as tabelas)
@@ -109,6 +129,20 @@ def _register_template_helpers(app):
     app.jinja_env.filters["datahora"] = fmt_datetime
     app.jinja_env.filters["data"] = fmt_date
     app.jinja_env.filters["texto"] = multiline
+    versions: dict[str, str] = {}
+
+    @app.template_global()
+    def asset(path):
+        """URL de arquivo estático com hash do conteúdo: pode ser cacheado para sempre pelo navegador/CDN."""
+        v = versions.get(path)
+        if v is None:
+            try:
+                v = hashlib.md5((Path(app.static_folder) / path).read_bytes()).hexdigest()[:10]  # noqa: S324
+            except OSError:
+                v = "0"
+            if not app.debug:
+                versions[path] = v
+        return url_for("static", filename=path, v=v)
 
     @app.template_global()
     def rotulo(kind, key):
@@ -116,8 +150,7 @@ def _register_template_helpers(app):
 
     @app.context_processor
     def inject_globals():
-        from app.models import Campaign
-        from app.services.campaigns import get_current_campaign
+        from app.services.campaigns import get_current_campaign, user_campaigns
 
         user = getattr(g, "user", None)
         if user is None:
@@ -125,7 +158,7 @@ def _register_template_helpers(app):
         return {
             "current_user": user,
             "current_campaign": get_current_campaign(),
-            "all_campaigns": Campaign.query.filter_by(owner_id=user.id).order_by(Campaign.status == "encerrada", Campaign.name).all(),
+            "all_campaigns": user_campaigns(),            # já carregada: nenhuma consulta extra
             "choices": constants.ALL_CHOICES,
         }
 
@@ -139,7 +172,10 @@ def _register_security(app):
     def require_login():
         """Toda rota exige login, exceto as públicas (login, cadastro, recuperação, estáticos)."""
         from app.services.auth import load_user
+        from app.services.campaigns import reset_request_cache
 
+        g.t0, g.db_n, g.db_ms = time.perf_counter(), 0, 0.0
+        reset_request_cache()
         g.user = load_user()
         if g.user is None and request.endpoint not in PUBLIC_ENDPOINTS:
             if _wants_json():
@@ -160,8 +196,14 @@ def _register_security(app):
         )
         if app.config.get("COOKIE_SECURE"):
             resp.headers.setdefault("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
-        if request.endpoint not in ("static", "media.serve"):
+        if request.endpoint == "static":
+            if request.args.get("v"):                               # URL versionada pelo conteúdo: cache eterno
+                resp.headers["Cache-Control"] = "public, max-age=31536000, immutable"
+        elif request.endpoint != "media.serve":
             resp.headers.setdefault("Cache-Control", "no-store")   # páginas com dados pessoais nunca ficam em cache
+        if "t0" in g:                                               # visível em DevTools → Network → Timing
+            total = (time.perf_counter() - g.t0) * 1000
+            resp.headers["Server-Timing"] = f'db;dur={g.db_ms:.1f};desc="{g.db_n} consultas", app;dur={total:.1f}'
         return resp
 
 

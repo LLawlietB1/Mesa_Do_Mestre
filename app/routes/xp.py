@@ -1,3 +1,4 @@
+from sqlalchemy.orm import selectinload
 from flask import Blueprint, flash, jsonify, redirect, render_template, request, url_for
 
 from app.constants import CHARACTER_STATUS, keys
@@ -18,7 +19,7 @@ def panel(campaign):
     query = Character.query.filter_by(campaign_id=campaign.id)
     if status in keys(CHARACTER_STATUS):
         query = query.filter_by(status=status)
-    characters = query.order_by(Character.name).all()
+    characters = query.options(selectinload(Character.player)).order_by(Character.name).all()
     return render_template("xp/panel.html", characters=characters, status=status)
 
 

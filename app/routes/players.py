@@ -1,9 +1,10 @@
 from flask import Blueprint, flash, g, redirect, render_template, request, url_for
+from sqlalchemy.orm import contains_eager, joinedload, selectinload
 
 from app.constants import PLAYER_STATUS, keys
 from app.extensions import db
 from app.forms.campaigns import PlayerForm
-from app.models import Campaign, CampaignPlayer, Player
+from app.models import Campaign, CampaignPlayer, Character, Player
 from app.routes.helpers import assign, flash_form_errors, get_or_404
 from app.services.common import safe_commit
 from app.services.messaging import normalize_phone
@@ -34,7 +35,7 @@ def index():
         query = query.filter_by(status=status)
     if campaign_id:
         query = query.join(CampaignPlayer).filter(CampaignPlayer.campaign_id == campaign_id, CampaignPlayer.status == "ativo")
-    players = query.order_by(Player.display_name).all()
+    players = query.options(selectinload(Player.characters), selectinload(Player.memberships)).order_by(Player.display_name).all()
     return render_template("players/index.html", players=players, q=q, status=status, campaign_id=campaign_id)
 
 
@@ -60,9 +61,11 @@ def new():
 def detail(player_id):
     player = get_or_404(Player, player_id)
     memberships = (
-        CampaignPlayer.query.filter_by(player_id=player.id).join(Campaign).order_by(CampaignPlayer.joined_at.desc()).all()
+        CampaignPlayer.query.filter_by(player_id=player.id).join(Campaign).options(contains_eager(CampaignPlayer.campaign))
+        .order_by(CampaignPlayer.joined_at.desc()).all()
     )
-    return render_template("players/detail.html", player=player, memberships=memberships)
+    characters = Character.query.filter_by(player_id=player.id).options(joinedload(Character.campaign)).order_by(Character.name).all()
+    return render_template("players/detail.html", player=player, memberships=memberships, characters=characters)
 
 
 @bp.route("/<int:player_id>/editar", methods=["GET", "POST"])

@@ -2,6 +2,7 @@
 de senha por palavra-chave (sem e-mail). Mesmo modelo de segurança do Professor Helper."""
 from __future__ import annotations
 
+import functools
 import hashlib
 import hmac
 import secrets
@@ -12,6 +13,7 @@ from argon2.exceptions import InvalidHashError, VerificationError
 from email_validator import EmailNotValidError, validate_email
 from flask import current_app, g, request
 from sqlalchemy import delete
+from sqlalchemy.orm import joinedload
 
 from app.extensions import db
 from app.models import Campaign, FileAsset, Player, User, UserSession
@@ -19,7 +21,12 @@ from app.models.mixins import utcnow
 
 COOKIE = "mm_session"
 _ph = PasswordHasher()
-_DUMMY_HASH = _ph.hash("senha-ficticia-para-igualar-tempo")
+
+
+@functools.cache
+def _dummy_hash() -> str:
+    """Hash usado só para igualar o tempo de resposta quando o e-mail não existe (calculado sob demanda)."""
+    return _ph.hash("senha-ficticia-para-igualar-tempo")
 
 
 def sha256(value: str) -> str:
@@ -130,7 +137,7 @@ def authenticate(email: str, password: str):
     generic = "E-mail ou senha incorretos."
     user = User.query.filter_by(email=normalize_email(email)).first()
     if user is None:
-        verify_secret(_DUMMY_HASH, password)   # tempo de resposta parecido: não revela se o e-mail existe
+        verify_secret(_dummy_hash(), password)   # tempo de resposta parecido: não revela se o e-mail existe
         return None, generic
     if _locked(user):
         return None, LOCKED_MSG
@@ -148,7 +155,7 @@ def reset_password_with_passphrase(email: str, passphrase: str, new_password: st
     generic = "E-mail ou palavra-chave incorretos."
     user = User.query.filter_by(email=normalize_email(email)).first()
     if user is None or not user.recovery_hash:
-        verify_secret(_DUMMY_HASH, passphrase)
+        verify_secret(_dummy_hash(), passphrase)
         return generic
     if _locked(user):
         return LOCKED_MSG
@@ -205,7 +212,7 @@ def load_user() -> User | None:
     token = request.cookies.get(COOKIE)
     if not token:
         return None
-    row = UserSession.query.filter_by(token_hash=sha256(token)).first()
+    row = UserSession.query.options(joinedload(UserSession.user)).filter_by(token_hash=sha256(token)).first()
     if row is None or row.expires_at < utcnow():
         return None
     return row.user

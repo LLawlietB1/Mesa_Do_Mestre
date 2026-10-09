@@ -18,7 +18,7 @@
 
 <section class="card">
   <h2>Quem possui</h2>
-  {% for h in item.holdings %}
+  {% for h in holdings %}
     <div class="list-row">
       <span><a href="{{ url_for('characters.detail', character_id=h.character_id) }}">{{ h.character.name }}</a> — ×{{ h.quantity }}
         {% if h.origin %}<span class="muted">· origem: {{ h.origin }}</span>{% endif %}

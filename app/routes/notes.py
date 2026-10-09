@@ -1,4 +1,5 @@
 from flask import Blueprint, flash, g, redirect, render_template, request, url_for
+from sqlalchemy.orm import selectinload
 
 from app.constants import NOTE_CATEGORIES, keys
 from app.extensions import db
@@ -46,7 +47,8 @@ def index(campaign):
         query = query.filter(Note.archived.is_(False))
     elif archived == "sim":
         query = query.filter(Note.archived.is_(True))
-    notes = query.order_by(Note.important.desc(), *ORDER.get(order, ORDER["recentes"])).all()
+    notes = (query.options(selectinload(Note.character), selectinload(Note.player))
+             .order_by(Note.important.desc(), *ORDER.get(order, ORDER["recentes"])).all())
     return render_template(
         "notes/index.html", notes=notes, q=q, category=category, scope=scope, character_id=character_id,
         archived=archived, order=order, characters=character_choices(campaign.id),
