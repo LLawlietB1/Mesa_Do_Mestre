@@ -1,6 +1,6 @@
 # Mesa do Mestre
 
-Aplicação web para mestres de RPG de mesa organizarem campanhas, jogadores, personagens, **XP manual**, notas privadas, diário de sessões, NPCs, missões e inventário — e **enviarem dados da campanha aos jogadores por WhatsApp/SMS**. Python (Flask + SQLAlchemy), Postgres (Neon) em produção, SQLite em desenvolvimento, hospedável na **Vercel**.
+Aplicação web para mestres de RPG de mesa organizarem campanhas, jogadores, personagens, **XP manual**, notas privadas, diário de sessões, NPCs, missões e inventário — e **enviarem dados da campanha aos jogadores por WhatsApp/SMS**. Python (Flask + SQLAlchemy), **Postgres (Neon)** e **Vercel Blob** (arquivos privados) em produção, SQLite em desenvolvimento, hospedável na **Vercel**.
 
 > **Multiusuário.** Cada pessoa cria a própria conta (login e senha) e só enxerga os **próprios** dados. Veja [SECURITY.md](SECURITY.md).
 
@@ -12,7 +12,7 @@ Aplicação web para mestres de RPG de mesa organizarem campanhas, jogadores, pe
 - Notas privadas, diário de sessões e linha do tempo, NPCs e relações, missões com objetivos e histórico, inventário.
 - **Mensagens aos jogadores** (ficha/XP, inventário, próxima sessão, resumo, missões ou texto livre): você revisa/edita e envia por link de **WhatsApp** ou **SMS** (abre no seu celular/PC, sem custo) ou, opcionalmente, direto pelo servidor via Twilio.
 - Backup e restauração **por conta** (JSON + imagens em .zip), transacional.
-- Interface responsiva com animações; imagens recodificadas e guardadas no banco.
+- Interface responsiva com animações; imagens recodificadas (Pillow) e guardadas no **Vercel Blob privado**.
 
 ## Rodar localmente (Windows / PowerShell)
 
@@ -44,6 +44,7 @@ Mesmo caminho do Professor Helper.
 1. **Repositório:** suba o projeto para o GitHub (o `.gitignore` já exclui `.env`, `.venv` e `instance/`).
 2. **Projeto na Vercel:** *Add New → Project* → importe o repositório. Framework: *Flask* (detectado). O `pyproject.toml` indica o ponto de entrada (`[tool.vercel] entrypoint = "run:app"`) e as dependências; não há `vercel.json`. Se faltar variável obrigatória, o site abre uma página explicando o que falta.
 3. **Banco:** aba *Storage* (ou Marketplace) → **Neon Postgres** → conectar ao projeto. Isso cria `DATABASE_URL`/`POSTGRES_URL` automaticamente (o app aceita as duas).
+   **Arquivos:** na mesma aba, crie um **Blob store** (acesso **privado**) e conecte ao projeto: isso cria `BLOB_READ_WRITE_TOKEN`.
 4. **Variáveis de ambiente** (Settings → Environment Variables, ambiente *Production*):
    | Variável | Valor |
    |---|---|
@@ -61,7 +62,8 @@ Mesmo caminho do Professor Helper.
 6. **Deploy:** *Deploy* (ou push na branch principal). Abra a URL, vá em `/cadastro` e use o `INVITE_CODE` para criar sua conta e depois passe o código aos amigos.
 
 Pontos de atenção na Vercel:
-- O disco é efêmero: por isso as imagens ficam **no banco** (tabela `file_assets`, com cota por conta) e o backup é um download.
+- O disco é efêmero: por isso as imagens ficam no **Vercel Blob privado** (o banco guarda só o registro e a URL privada, com cota por conta) e o backup é um download.
+- As imagens **nunca** têm URL pública: o navegador só recebe `/media/<id>`, e o servidor confere o dono antes de buscar o arquivo no Blob.
 - Corpo de requisição/resposta limitado a ~4,5 MB: vale para upload de imagem e para backups (mantenha a cota baixa).
 - O plano gratuito do Neon tem 0,5 GB: mais que suficiente para algumas mesas.
 
@@ -123,7 +125,8 @@ app/                 fábrica, models, services, forms, routes, templates, stati
   services/ownership.py   isolamento por usuário (get_or_404 verifica o dono)
   services/backup.py      backup/restauração por usuário
   services/messaging.py   textos, links WhatsApp/SMS, Twilio
-  services/uploads.py     validação/recodificação de imagens (Pillow) no banco
+  services/uploads.py     validação/recodificação de imagens (Pillow)
+  services/blobstore.py   cliente do Vercel Blob privado (HTTP direto, sem SDK)
 migrations/          Alembic (Postgres e SQLite)
 tests/               pytest (193+ testes, incluindo varredura de IDOR)
 ```
@@ -132,11 +135,11 @@ Novo módulo: `models/x.py`, `forms/x.py`, `routes/x.py` (registrar em `routes/_
 
 ## O que mudou em relação à versão local (mesmas ideias do Professor Helper)
 
-SQLite+disco → Postgres+imagens no banco; app de uma pessoa → multiusuário com login; backup do arquivo inteiro → backup **escopado por usuário** (um backup do banco todo vazaria dados de todos); cabeçalhos de segurança e cookies `Secure` em produção; configuração por variáveis de ambiente.
+SQLite+disco → Postgres (Neon) + Vercel Blob privado; app de uma pessoa → multiusuário com login; backup do arquivo inteiro → backup **escopado por usuário** (um backup do banco todo vazaria dados de todos); cabeçalhos de segurança e cookies `Secure` em produção; configuração por variáveis de ambiente.
 
 ## Limitações conhecidas
 
 - Sem recuperação por e-mail (por escolha, como no Professor Helper).
 - Limite por IP no login não existe (o bloqueio é por conta); o `INVITE_CODE` evita cadastros abertos.
-- Imagens: cota pequena por causa do limite de corpo da Vercel.
+- Imagens: cota pequena (3 MB/conta) porque o backup baixável precisa caber no limite de ~4,5 MB de resposta da Vercel.
 - O suporte a Postgres foi validado pelo DDL gerado e pela suíte em SQLite; rode a suíte com `TEST_DATABASE_URL` num banco descartável do Neon para confirmar no seu ambiente.

@@ -10,6 +10,7 @@ from flask import Flask, g, has_request_context, jsonify, redirect, render_templ
 from flask_wtf.csrf import CSRFError
 from sqlalchemy import event
 from sqlalchemy.exc import OperationalError, ProgrammingError
+from sqlalchemy.orm import Session
 from sqlalchemy.engine import Engine
 from werkzeug.exceptions import HTTPException
 from werkzeug.middleware.proxy_fix import ProxyFix
@@ -42,6 +43,32 @@ def _query_end(conn, cursor, statement, parameters, context, executemany):
     if has_request_context() and conn.info.get("_qt"):
         g.db_ms = g.get("db_ms", 0.0) + (time.perf_counter() - conn.info["_qt"].pop()) * 1000
         g.db_n = g.get("db_n", 0) + 1
+
+
+@event.listens_for(Session, "after_flush")
+def _blobs_flushed(session, _ctx):
+    """Anota os blobs cujo registro (FileAsset) acabou de ser gravado nesta transação."""
+    if has_request_context():
+        from app.models import FileAsset
+
+        urls = {o.storage_url for o in session.new if isinstance(o, FileAsset) and o.storage_url}
+        if urls:
+            g.setdefault("flushed_blob", set()).update(urls)
+
+
+@event.listens_for(Session, "after_commit")
+def _blobs_confirmed(session):
+    """Commit feito: os blobs com registro gravado deixam de ser 'pendentes' (nenhum outro commit os confirma)."""
+    if has_request_context():
+        confirmed = g.pop("flushed_blob", set())
+        if confirmed and g.get("pending_blob"):
+            g.pending_blob = [u for u in g.pending_blob if u not in confirmed]
+
+
+@event.listens_for(Session, "after_rollback")
+def _blobs_rolled_back(session):
+    if has_request_context():
+        g.pop("flushed_blob", None)           # o registro foi desfeito: o blob continua pendente (e será apagado)
 
 
 def create_app(config_name=None, test_config=None):
@@ -81,6 +108,15 @@ def create_app(config_name=None, test_config=None):
 
     from app.cli import register_cli
     register_cli(app)
+
+    @app.teardown_request
+    def discard_unconfirmed_blobs(_exc):
+        """Upload feito mas a requisição não confirmou no banco (erro/rollback): apaga o arquivo órfão."""
+        urls = g.pop("pending_blob", None)
+        if urls:
+            from app.services import blobstore
+
+            blobstore.delete(urls)
 
     @app.get("/health")
     def health():

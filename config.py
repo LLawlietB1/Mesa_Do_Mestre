@@ -85,6 +85,8 @@ class Config:
     RESEND_FROM = os.environ.get("RESEND_FROM", "Mesa do Mestre <onboarding@resend.dev>")
     ADMIN_EMAIL = os.environ.get("ADMIN_EMAIL", "")
     IMAGE_REQUEST_COOLDOWN_MIN = 30
+    # Vercel Blob (arquivos privados). Criar um Blob store na aba Storage do projeto preenche esta variável.
+    BLOB_READ_WRITE_TOKEN = os.environ.get("BLOB_READ_WRITE_TOKEN", "")
 
     def __init__(self):
         url = database_url()
@@ -122,6 +124,7 @@ class TestingConfig(Config):
     INVITE_CODE = ""
     TWILIO_ACCOUNT_SID = TWILIO_AUTH_TOKEN = TWILIO_SMS_FROM = TWILIO_WHATSAPP_FROM = ""
     RESEND_API_KEY = ADMIN_EMAIL = ""
+    BLOB_READ_WRITE_TOKEN = ""
 
     def __init__(self):
         super().__init__()

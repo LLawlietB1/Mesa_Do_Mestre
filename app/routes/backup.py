@@ -5,6 +5,7 @@ from app.services import backup as backup_service
 from app.services.backup import BackupError
 
 bp = Blueprint("backup", __name__, url_prefix="/backup")
+MAX_DOWNLOAD = 4_200_000     # a Vercel limita a resposta de uma função a ~4,5 MB
 
 
 @bp.get("/")
@@ -19,7 +20,14 @@ def download():
     if not form.validate_on_submit():
         flash("Requisição inválida.", "error")
         return redirect(url_for("backup.index"))
-    name, payload = backup_service.create_backup(g.user)
+    try:
+        name, payload = backup_service.create_backup(g.user)
+    except BackupError as exc:
+        flash(str(exc), "error")
+        return redirect(url_for("backup.index"))
+    if len(payload) > MAX_DOWNLOAD:
+        flash("O backup passou do limite de download da hospedagem (4 MB). Remova imagens que não usa mais e tente de novo.", "error")
+        return redirect(url_for("backup.index"))
     return Response(payload, mimetype="application/zip", headers={
         "Content-Disposition": f'attachment; filename="{name}"', "Cache-Control": "no-store",
     })

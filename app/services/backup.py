@@ -18,7 +18,8 @@ from sqlalchemy.exc import SQLAlchemyError
 from app.extensions import db
 from app.models import Campaign, FileAsset, Player
 from app.models.mixins import utcnow
-from app.services.uploads import SAFE_NAME, UploadError, process_image
+from app.services import blobstore
+from app.services.uploads import SAFE_NAME, UploadError, process_image, read_asset
 
 APP_ID = "mesa-do-mestre"
 FORMAT_VERSION = 2
@@ -91,8 +92,12 @@ def create_backup(user) -> tuple[str, bytes]:
         rows = db.session.execute(select(*cols).where(where)).mappings().all()
         tables[name] = [{k: _ser(v) for k, v in row.items()} for row in rows]
     assets = db.session.query(FileAsset).filter_by(owner_id=uid).all()
+    contents = {}
     for a in assets:
-        db.session.refresh(a, ["data"])
+        try:
+            contents[a.id] = read_asset(a)[0]
+        except blobstore.BlobError as exc:
+            raise BackupError(f"Não foi possível ler uma imagem para o backup: {exc}") from None
     manifest = {"app": APP_ID, "format": FORMAT_VERSION, "created_at": utcnow().isoformat(timespec="seconds") + "Z",
                 "user": user.email}
     buf = io.BytesIO()
@@ -101,7 +106,7 @@ def create_backup(user) -> tuple[str, bytes]:
         zf.writestr(DATA, json.dumps({"tables": tables, "assets": [
             {"id": a.id, "content_type": a.content_type} for a in assets]}, ensure_ascii=False))
         for a in assets:
-            zf.writestr(FILES_PREFIX + a.id, a.data)
+            zf.writestr(FILES_PREFIX + a.id, contents[a.id])
     name = f"mesa-do-mestre-{utcnow().strftime('%Y%m%d-%H%M%S')}.zip"
     return name, buf.getvalue()
 
@@ -173,6 +178,8 @@ def restore_backup(user, source) -> dict:
     """Substitui os dados DO USUÁRIO pelos do backup. Qualquer falha desfaz tudo (nada é alterado)."""
     data, files = _read_package(source)
     uid = user.id
+    old_urls = [u for (u,) in db.session.query(FileAsset.storage_url).filter(FileAsset.owner_id == uid, FileAsset.storage_url.isnot(None))]
+    created_urls: list[str] = []
     try:
         asset_map: dict[str, str] = {}
         import uuid
@@ -190,7 +197,16 @@ def restore_backup(user, source) -> dict:
 
         # 2) grava imagens e linhas, gerando ids novos e remapeando as chaves estrangeiras
         for old_id, (processed, ctype) in files.items():
-            db.session.add(FileAsset(id=asset_map[old_id], owner_id=uid, content_type=ctype, size=len(processed), data=processed))
+            asset = FileAsset(id=asset_map[old_id], owner_id=uid, content_type=ctype, size=len(processed))
+            if blobstore.enabled():
+                try:
+                    asset.storage_url = blobstore.put(f"img/{asset.id}.webp", processed, ctype)
+                except blobstore.BlobError as exc:
+                    raise BackupError(f"Não foi possível salvar as imagens do backup: {exc}") from None
+                created_urls.append(asset.storage_url)
+            else:
+                asset.data = processed
+            db.session.add(asset)
         db.session.flush()
         id_maps: dict[str, dict] = {}
         for name in TABLE_ORDER:
@@ -225,9 +241,12 @@ def restore_backup(user, source) -> dict:
         db.session.commit()
     except BackupError:
         db.session.rollback()
+        blobstore.delete(created_urls)            # desfaz os arquivos já enviados: nada fica órfão
         raise
     except SQLAlchemyError:
         db.session.rollback()
+        blobstore.delete(created_urls)
         current_app.logger.exception("Falha ao restaurar backup")
         raise BackupError("O backup contém dados inconsistentes com esta versão do sistema. Nada foi alterado.") from None
+    blobstore.delete(old_urls)                    # imagens substituídas deixam de existir
     return {"rows": sum(len(v) for v in data["tables"].values()), "images": len(files)}

@@ -17,6 +17,7 @@ from sqlalchemy.orm import joinedload
 
 from app.extensions import db
 from app.models import Campaign, FileAsset, Player, User, UserSession
+from app.services import blobstore
 from app.models.mixins import utcnow
 
 COOKIE = "mm_session"
@@ -227,7 +228,9 @@ def current_user() -> User | None:
 def delete_account(user: User) -> None:
     """Apaga TODOS os dados do usuário (LGPD). Deletes em massa: o banco aplica os ON DELETE CASCADE."""
     uid = user.id
+    blob_urls = [u for (u,) in db.session.query(FileAsset.storage_url).filter(FileAsset.owner_id == uid, FileAsset.storage_url.isnot(None))]
     for model in (Campaign, Player, FileAsset):          # campanhas primeiro: personagens referenciam jogadores
         db.session.execute(delete(model).where(model.owner_id == uid))
     db.session.execute(delete(User).where(User.id == uid))
     db.session.commit()
+    blobstore.delete(blob_urls)

@@ -21,7 +21,7 @@ Resumo do modelo de segurança do app hospedado (multiusuário) e do que é veri
 ## Aplicação
 
 - CSRF em todos os POST (inclusive os JSON, via cabeçalho). Auto-escape do Jinja; CSP sem scripts inline; `X-Frame-Options: DENY`; `nosniff`; HSTS em produção; `Cache-Control: no-store` nas páginas.
-- Uploads: extensão, tamanho e conteúdo verificados e **recodificados com Pillow** (remove EXIF, limita a 800 px, nunca SVG), cota por conta, nome gerado, servido só ao dono por `/media/<id>`.
+- Uploads: extensão, tamanho e conteúdo verificados e **recodificados com Pillow** (remove EXIF, limita a 800 px, nunca SVG), cota por conta, nome gerado. Os arquivos ficam no **Vercel Blob privado**; a URL do blob e o token nunca saem do servidor — o navegador só vê `/media/<id>`, servido ao dono depois da checagem de posse. O cliente do Blob só aceita hosts `*.blob.vercel-storage.com` e não segue redirecionamentos para outros domínios (o token não vaza). Arquivos enviados e não confirmados no banco são apagados no fim da requisição.
 - Mensagens: só dados públicos (teste garante que segredos/notas do mestre não vazam); destinatário precisa de telefone **e consentimento**; envio pelo servidor exige conta liberada, limite diário e fica registrado (sem o texto).
 - SQL somente via ORM/parâmetros; `LIKE` com escape; erros 500 sem rastreamento.
 
