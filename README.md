@@ -42,7 +42,7 @@ Testes: `pytest` (usa SQLite em memória e **nunca** toca nos seus dados). Para 
 Mesmo caminho do Professor Helper.
 
 1. **Repositório:** suba o projeto para o GitHub (o `.gitignore` já exclui `.env`, `.venv` e `instance/`).
-2. **Projeto na Vercel:** *Add New → Project* → importe o repositório. Framework: *Other*. A Vercel detecta `api/index.py` e `vercel.json` (todas as rotas vão para a função Flask) e usa o Python de `.python-version` (3.12).
+2. **Projeto na Vercel:** *Add New → Project* → importe o repositório. Framework: *Flask* (detectado). O `pyproject.toml` indica o ponto de entrada (`[tool.vercel] entrypoint = "run:app"`) e as dependências; não há `vercel.json`. Se faltar variável obrigatória, o site abre uma página explicando o que falta.
 3. **Banco:** aba *Storage* (ou Marketplace) → **Neon Postgres** → conectar ao projeto. Isso cria `DATABASE_URL`/`POSTGRES_URL` automaticamente (o app aceita as duas).
 4. **Variáveis de ambiente** (Settings → Environment Variables, ambiente *Production*):
    | Variável | Valor |
@@ -96,7 +96,7 @@ flask list-users
 ## Estrutura
 
 ```
-api/index.py         entrada da Vercel (função Flask)      vercel.json  rewrites
+run.py               entrada (local e Vercel: `run:app`)    pyproject.toml  dependências + entrypoint da Vercel
 app/                 fábrica, models, services, forms, routes, templates, static
   services/auth.py        Argon2id, sessões, bloqueio, recuperação
   services/ownership.py   isolamento por usuário (get_or_404 verifica o dono)

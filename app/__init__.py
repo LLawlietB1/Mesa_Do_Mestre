@@ -46,6 +46,8 @@ def create_app(config_name=None, test_config=None):
         app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)
 
     db.init_app(app)
+    if app.config.get("CONFIG_ERROR"):
+        return _config_error_app(app)         # configuração inválida: explica em vez de um "500" mudo
     # render_as_batch: necessário para ALTER TABLE no SQLite (no Postgres é transparente)
     migrate.init_app(app, db, render_as_batch=True, compare_type=True)
     csrf.init_app(app)
@@ -78,6 +80,21 @@ def create_app(config_name=None, test_config=None):
 
     if not app.debug and not app.testing:
         logging.basicConfig(level=logging.INFO)
+    return app
+
+
+def _config_error_app(app):
+    """App mínimo que responde a TODAS as rotas com a descrição do erro de configuração (sem segredos)."""
+    app.logger.error("Configuração inválida: %s", app.config["CONFIG_ERROR"])
+    message = app.config["CONFIG_ERROR"]
+
+    @app.route("/", defaults={"path": ""})
+    @app.route("/<path:path>")
+    def config_error(path):
+        return (f"<!doctype html><meta charset=utf-8><title>Erro de configuração</title>"
+                f"<h1>Mesa do Mestre — erro de configuração</h1><p>{message}</p>"
+                f"<p>Depois de corrigir, faça um novo deploy (variáveis novas só valem após redeploy).</p>"), 500
+
     return app
 
 

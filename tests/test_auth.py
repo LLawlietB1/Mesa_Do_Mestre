@@ -140,11 +140,13 @@ def test_registration_closed_without_invite_in_production_mode(app, anon_client)
     assert _register(anon_client).status_code == 403 and User.query.count() == 0
 
 
-def test_production_requires_secret_key(monkeypatch):
+def test_production_without_secret_key_serves_explanatory_error(monkeypatch):
     from app import create_app
     monkeypatch.delenv("SECRET_KEY", raising=False)
-    with pytest.raises(RuntimeError):
-        create_app("production")
+    app = create_app("production")
+    for path in ("/", "/login", "/qualquer/coisa"):
+        r = app.test_client().get(path)
+        assert r.status_code == 500 and "SECRET_KEY" in r.get_data(as_text=True)
 
 
 # ---------------------------------------------------------------- recuperação

@@ -100,9 +100,10 @@ class ProductionConfig(Config):
     def __init__(self):
         super().__init__()
         key = os.environ.get("SECRET_KEY")
-        if not key:
-            raise RuntimeError("SECRET_KEY é obrigatória em produção (veja .env.example).")
-        self.SECRET_KEY = key
+        self.SECRET_KEY = key or secrets.token_hex(32)       # chave efêmera: o app não serve nada sem a real
+        self.CONFIG_ERROR = "" if key else (
+            "A variável de ambiente SECRET_KEY não está definida. Gere uma com "
+            "python -c \"import secrets; print(secrets.token_hex(32))\" e adicione em Settings → Environment Variables (Production).")
 
 
 class TestingConfig(Config):

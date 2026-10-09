@@ -42,12 +42,19 @@ def test_missing_tables_show_helpful_message(app, db, anon_client):
     assert r.status_code == 500 and "flask db upgrade" in r.get_data(as_text=True)
 
 
-def test_startup_error_page_names_the_problem(monkeypatch):
-    import importlib, sys
-    monkeypatch.setenv("VERCEL", "1")
-    monkeypatch.delenv("SECRET_KEY", raising=False)
-    sys.modules.pop("api.index", None)
-    mod = importlib.import_module("api.index")
-    r = mod.app.test_client().get("/qualquer")
-    assert r.status_code == 500 and "SECRET_KEY" in r.get_data(as_text=True)
-    sys.modules.pop("api.index", None)
+def test_pyproject_dependencies_match_requirements():
+    """A Vercel lê o pyproject.toml: as dependências precisam ser as mesmas do requirements.txt."""
+    import tomllib
+    from pathlib import Path
+    root = Path(__file__).resolve().parent.parent
+    data = tomllib.loads((root / "pyproject.toml").read_text(encoding="utf-8"))
+    assert data["tool"]["vercel"]["entrypoint"] == "run:app"
+    reqs = [l.strip() for l in (root / "requirements.txt").read_text(encoding="utf-8").splitlines() if l.strip() and not l.startswith("#")]
+    assert sorted(data["project"]["dependencies"]) == sorted(reqs)
+
+
+def test_entrypoint_exposes_flask_app_at_top_level():
+    import ast
+    from pathlib import Path
+    tree = ast.parse((Path(__file__).resolve().parent.parent / "run.py").read_text(encoding="utf-8"))
+    assert any(isinstance(n, ast.Assign) and n.targets[0].id == "app" for n in tree.body if isinstance(n, ast.Assign))
