@@ -108,7 +108,9 @@ def register_user(name: str, email: str, password: str, passphrase: str) -> User
     for problem in (password_problem(password), passphrase_problem(passphrase)):
         if problem:
             raise RegistrationError(problem)
-    user = User(name=name.strip(), email=email, password_hash=hash_secret(password), recovery_hash=hash_passphrase(passphrase))
+    first = current_app.config.get("FIRST_USER_IS_ADMIN") and not db.session.query(User.id).first()
+    user = User(name=name.strip(), email=email, password_hash=hash_secret(password), recovery_hash=hash_passphrase(passphrase),
+                role="ADMIN" if first else "MESTRE")
     db.session.add(user)
     db.session.commit()
     return user

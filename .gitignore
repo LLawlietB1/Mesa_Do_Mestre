@@ -8,3 +8,4 @@ instance/*
 .env.*
 !.env.example
 .vercel/
+local/dados/

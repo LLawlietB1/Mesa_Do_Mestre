@@ -223,3 +223,15 @@ def test_delete_account_removes_everything_of_that_user_only(app, user, other_us
 
 def test_account_page_renders(client):
     assert client.get("/conta").status_code == 200
+
+
+def test_first_account_becomes_admin_only_when_database_is_empty(app, db):
+    app.config["FIRST_USER_IS_ADMIN"] = True
+    first = auth_service.register_user("Dono", "dono@example.com", PASSWORD, "palavra dono")
+    second = auth_service.register_user("Amigo", "amigo@example.com", PASSWORD, "palavra amigo")
+    assert first.role == "ADMIN" and first.can_upload_images
+    assert second.role == "MESTRE" and not second.can_upload_images
+
+
+def test_first_account_is_regular_when_flag_is_off(app, db):
+    assert auth_service.register_user("A", "a1@example.com", PASSWORD, "palavra a").role == "MESTRE"

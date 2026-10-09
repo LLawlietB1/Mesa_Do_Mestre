@@ -85,6 +85,8 @@ class Config:
     RESEND_FROM = os.environ.get("RESEND_FROM", "Mesa do Mestre <onboarding@resend.dev>")
     ADMIN_EMAIL = os.environ.get("ADMIN_EMAIL", "")
     IMAGE_REQUEST_COOLDOWN_MIN = 30
+    # A primeira conta de um banco vazio vira administradora (dona da instalação).
+    FIRST_USER_IS_ADMIN = True
     # Vercel Blob (arquivos privados). Criar um Blob store na aba Storage do projeto preenche esta variável.
     BLOB_READ_WRITE_TOKEN = os.environ.get("BLOB_READ_WRITE_TOKEN", "")
 
@@ -121,6 +123,7 @@ class TestingConfig(Config):
     SECRET_KEY = "testing-secret"
     WTF_CSRF_ENABLED = False
     ALLOW_OPEN_REGISTRATION = True
+    FIRST_USER_IS_ADMIN = False        # nos testes todo mundo começa como conta comum
     INVITE_CODE = ""
     TWILIO_ACCOUNT_SID = TWILIO_AUTH_TOKEN = TWILIO_SMS_FROM = TWILIO_WHATSAPP_FROM = ""
     RESEND_API_KEY = ADMIN_EMAIL = ""
