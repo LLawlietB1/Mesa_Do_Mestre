@@ -137,6 +137,8 @@ def test_registration_invite_code_mode(app, anon_client):
 def test_registration_closed_without_invite_in_production_mode(app, anon_client):
     app.config.update(INVITE_CODE="", ALLOW_OPEN_REGISTRATION=False)
     assert anon_client.get("/cadastro").status_code == 403
+    assert "INVITE_CODE" in anon_client.get("/cadastro").get_data(as_text=True)
+    assert "/cadastro" in anon_client.get("/login").get_data(as_text=True)      # o link continua visível
     assert _register(anon_client).status_code == 403 and User.query.count() == 0
 
 

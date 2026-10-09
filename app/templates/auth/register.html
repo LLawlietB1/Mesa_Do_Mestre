@@ -5,6 +5,7 @@
 <h2>Criar conta</h2>
 {% if mode == 'closed' %}
   <p>Os cadastros estão fechados no momento. Peça um convite a quem administra este servidor.</p>
+  <p class="muted"><strong>Administrador:</strong> para abrir o cadastro por convite, defina a variável de ambiente <code>INVITE_CODE</code> (uma frase secreta que você passa aos amigos) nas configurações do servidor e faça um novo deploy.</p>
 {% else %}
 <form method="post" class="stack-form" novalidate data-loading-form>
   {{ form.hidden_tag() }}
