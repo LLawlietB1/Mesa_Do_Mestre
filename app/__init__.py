@@ -6,6 +6,7 @@ import sqlite3
 from flask import Flask, g, jsonify, redirect, render_template, request, url_for
 from flask_wtf.csrf import CSRFError
 from sqlalchemy import event
+from sqlalchemy.exc import OperationalError, ProgrammingError
 from sqlalchemy.engine import Engine
 from werkzeug.exceptions import HTTPException
 from werkzeug.middleware.proxy_fix import ProxyFix
@@ -34,6 +35,7 @@ def create_app(config_name=None, test_config=None):
     if cfg_cls is None:
         raise RuntimeError(f"MESA_ENV inválido: {name!r} (use development, production ou testing)")
     cfg = cfg_cls()
+    app.config["ENV_NAME"] = name
     for key in dir(cfg):
         if key.isupper():
             app.config[key] = getattr(cfg, key)
@@ -60,7 +62,19 @@ def create_app(config_name=None, test_config=None):
 
     @app.get("/health")
     def health():
-        return jsonify(ok=True)
+        """Diagnóstico público e sem segredos: conexão com o banco e se as tabelas já existem."""
+        from sqlalchemy import inspect, text
+
+        status = {"ok": True, "env": app.config.get("ENV_NAME", "?")}
+        try:
+            db.session.execute(text("SELECT 1"))
+            status["db"] = "ok"
+            status["schema"] = "ok" if inspect(db.engine).has_table("users") else "faltando: rode flask db upgrade"
+            status["ok"] = status["schema"] == "ok"
+        except Exception:  # noqa: BLE001 - qualquer falha de conexão vira diagnóstico, nunca vaza detalhes
+            app.logger.exception("Falha no /health")
+            status.update(ok=False, db="erro de conexão: confira DATABASE_URL")
+        return jsonify(status), (200 if status["ok"] else 503)
 
     if not app.debug and not app.testing:
         logging.basicConfig(level=logging.INFO)
@@ -160,4 +174,9 @@ def _register_error_handlers(app):
     def unexpected(e):
         db.session.rollback()
         app.logger.exception("Erro inesperado: %s", e)
+        if isinstance(e, (ProgrammingError, OperationalError)):
+            text = str(getattr(e, "orig", e)).lower()
+            if "does not exist" in text or "no such table" in text:
+                return respond(500, "Banco não inicializado", "As tabelas ainda não existem no banco. Rode «flask db upgrade» apontando para o seu banco (veja o README, seção Deploy).")
+            return respond(500, "Banco indisponível", "Não foi possível usar o banco de dados. Confira a variável DATABASE_URL e tente novamente.")
         return respond(500, "Erro interno", "Algo deu errado. Seus dados não foram corrompidos; tente novamente.")

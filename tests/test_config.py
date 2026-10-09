@@ -26,3 +26,28 @@ def test_vercel_forces_production(monkeypatch):
     monkeypatch.setenv("VERCEL", "1")
     monkeypatch.setenv("MESA_ENV", "development")
     assert env_name() == "production"
+
+
+def test_health_reports_missing_schema_and_ok(app, db, anon_client):
+    r = anon_client.get("/health")
+    assert r.status_code == 200 and r.get_json()["schema"] == "ok"
+    db.drop_all()
+    r = anon_client.get("/health")
+    assert r.status_code == 503 and "flask db upgrade" in r.get_json()["schema"]
+
+
+def test_missing_tables_show_helpful_message(app, db, anon_client):
+    db.drop_all()
+    r = anon_client.post("/login", data={"email": "a@example.com", "password": "senha-forte-1"})
+    assert r.status_code == 500 and "flask db upgrade" in r.get_data(as_text=True)
+
+
+def test_startup_error_page_names_the_problem(monkeypatch):
+    import importlib, sys
+    monkeypatch.setenv("VERCEL", "1")
+    monkeypatch.delenv("SECRET_KEY", raising=False)
+    sys.modules.pop("api.index", None)
+    mod = importlib.import_module("api.index")
+    r = mod.app.test_client().get("/qualquer")
+    assert r.status_code == 500 and "SECRET_KEY" in r.get_data(as_text=True)
+    sys.modules.pop("api.index", None)
