@@ -1,0 +1,98 @@
+{% extends 'base.html' %}
+{% import '_macros.html' as m %}
+{% block title %}{{ campaign.name }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <a class="back-link" href="{{ url_for('campaigns.index') }}">{{ m.icon('back', 16) }} Campanhas</a>
+    <h1>{{ campaign.name }} {{ m.badge('campaign_status', campaign.status) }}</h1>
+    <p class="muted">{{ [campaign.system, campaign.setting] | select | join(' · ') or 'Sem sistema ou ambientação definidos' }}{% if campaign.start_date %} · início em {{ campaign.start_date | data }}{% endif %}</p>
+  </div>
+  <div class="page-head__actions">
+    {% if not current_campaign or current_campaign.id != campaign.id %}
+      {{ m.post_button(url_for('campaigns.select'), 'Selecionar', fields={'campaign_id': campaign.id}, cls='btn btn--primary') }}
+    {% endif %}
+    <a class="btn" href="{{ url_for('campaigns.edit', campaign_id=campaign.id) }}">{{ m.icon('edit', 16) }} Editar</a>
+  </div>
+</div>
+
+{% if campaign.cover_image %}<img class="cover" src="{{ url_for('media.serve', filename=campaign.cover_image) }}" alt="Capa da campanha {{ campaign.name }}">{% endif %}
+
+<section class="stats">
+  <div class="stat card"><span class="stat__n">{{ stats.characters }}</span><span class="stat__l">Personagens</span></div>
+  <div class="stat card"><span class="stat__n">{{ stats.sessions }}</span><span class="stat__l">Sessões</span></div>
+  <div class="stat card"><span class="stat__n">{{ stats.quests }}</span><span class="stat__l">Missões</span></div>
+  <div class="stat card"><span class="stat__n">{{ stats.npcs }}</span><span class="stat__l">NPCs</span></div>
+</section>
+
+{% if campaign.description %}<section class="card"><h2>Descrição</h2><p>{{ campaign.description | texto }}</p></section>{% endif %}
+{% if campaign.notes %}<section class="card"><h2>Observações gerais</h2><p>{{ campaign.notes | texto }}</p></section>{% endif %}
+{% if campaign.settings %}
+<section class="card"><h2>Configurações específicas</h2>
+  <dl class="kv">{% for k, v in campaign.settings.items() %}<dt>{{ k }}</dt><dd>{{ v }}</dd>{% endfor %}</dl>
+</section>
+{% endif %}
+
+<div class="two-col">
+  <section class="card">
+    <h2>Jogadores da campanha</h2>
+    {% for p, ms in members %}
+      <div class="list-row">
+        <span><a href="{{ url_for('players.detail', player_id=p.id) }}">{{ p.display_name }}</a>
+          {% if ms.status != 'ativo' %}<span class="badge badge--inativo">Saiu em {{ ms.left_at | data }}</span>{% endif %}</span>
+        {% if ms.status == 'ativo' %}
+          {{ m.post_button(url_for('campaigns.remove_player', campaign_id=campaign.id, player_id=p.id), 'Remover', confirm='Encerrar a participação de ' ~ p.display_name ~ ' nesta campanha? Os personagens e o histórico serão mantidos.') }}
+        {% endif %}
+      </div>
+    {% else %}<p class="muted">Nenhum jogador nesta campanha.</p>{% endfor %}
+    {% if has_available %}
+    <form method="post" action="{{ url_for('campaigns.add_player', campaign_id=campaign.id) }}" class="inline-add">
+      {{ add_form.hidden_tag() }}
+      <label class="sr-only" for="{{ add_form.player_id.id }}">Jogador</label>
+      {{ add_form.player_id }}
+      <button class="btn btn--sm btn--primary" type="submit">Adicionar</button>
+    </form>
+    {% else %}<p class="muted"><a href="{{ url_for('players.new') }}">Cadastrar um novo jogador</a></p>{% endif %}
+  </section>
+
+  <section class="card">
+    <h2>Personagens</h2>
+    {% for c in characters %}
+      <a class="list-row" href="{{ url_for('characters.detail', character_id=c.id) }}">
+        <span>{{ c.name }} <span class="muted">· {{ c.player.display_name }}</span></span>{{ m.badge('character_status', c.status) }}
+      </a>
+    {% else %}<p class="muted">Nenhum personagem.</p>{% endfor %}
+  </section>
+</div>
+
+<section class="card">
+  <div class="card__head"><h2>Sessões recentes</h2><a href="{{ url_for('sessions.index') }}">Histórico</a></div>
+  {% for s in recent_sessions %}
+    <a class="list-row" href="{{ url_for('sessions.detail', session_id=s.id) }}"><span>Sessão {{ s.number }} — {{ s.title }}</span><span class="muted">{{ s.date | data }}</span></a>
+  {% else %}<p class="muted">Nenhuma sessão registrada.</p>{% endfor %}
+  <p class="muted">Para consultar NPCs e missões, selecione esta campanha e use o menu.</p>
+</section>
+
+<section class="card danger-zone">
+  <h2>Status e exclusão</h2>
+  <div class="row">
+    {% if campaign.status != 'encerrada' %}
+      {{ m.post_button(url_for('campaigns.set_status', campaign_id=campaign.id), 'Encerrar campanha', confirm='Encerrar esta campanha? Todos os registros serão preservados e ela continuará consultável.', fields={'status': 'encerrada'}, cls='btn btn--sm') }}
+    {% else %}
+      {{ m.post_button(url_for('campaigns.set_status', campaign_id=campaign.id), 'Reativar campanha', fields={'status': 'ativa'}, cls='btn btn--sm') }}
+    {% endif %}
+    {% for k, l in choices.campaign_status if k != campaign.status and k != 'encerrada' %}
+      {{ m.post_button(url_for('campaigns.set_status', campaign_id=campaign.id), 'Marcar como ' ~ l|lower, fields={'status': k}) }}
+    {% endfor %}
+  </div>
+  <form method="post" action="{{ url_for('campaigns.delete', campaign_id=campaign.id) }}" class="delete-campaign" data-confirm="Excluir DEFINITIVAMENTE a campanha e todos os seus personagens, notas, sessões, NPCs, missões e itens? Esta ação não pode ser desfeita.">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <label class="field__label" for="confirm_name">Excluir definitivamente — digite o nome da campanha para confirmar</label>
+    <div class="row">
+      <input id="confirm_name" name="confirm_name" autocomplete="off" placeholder="{{ campaign.name }}">
+      <button class="btn btn--danger" type="submit">{{ m.icon('trash', 16) }} Excluir campanha</button>
+    </div>
+    <small class="field__hint">Prefira «Encerrar» para manter o histórico.</small>
+  </form>
+</section>
+{% endblock %}

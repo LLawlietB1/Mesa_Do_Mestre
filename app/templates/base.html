@@ -1,0 +1,104 @@
+{% import '_macros.html' as m %}
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="csrf-token" content="{{ csrf_token() }}">
+  <title>{% block title %}{{ page_title|default('Painel') }}{% endblock %} · Mesa do Mestre</title>
+  <link rel="icon" href="{{ url_for('static', filename='images/favicon.svg') }}" type="image/svg+xml">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/polish.css') }}">
+  <script src="{{ url_for('static', filename='js/app.js') }}" defer></script>
+</head>
+<body>
+<a class="skip-link" href="#conteudo">Pular para o conteúdo</a>
+
+{% set nav = [
+  ('dashboard.index', 'home', 'Painel'),
+  ('campaigns.index', 'campaign', 'Campanhas'),
+  ('players.index', 'players', 'Jogadores'),
+  ('characters.index', 'character', 'Personagens'),
+  ('xp.panel', 'xp', 'Experiência'),
+  ('sessions.index', 'sessions', 'Sessões'),
+  ('notes.index', 'notes', 'Notas'),
+  ('npcs.index', 'npc', 'NPCs'),
+  ('quests.index', 'quest', 'Missões'),
+  ('items.index', 'items', 'Inventário'),
+  ('messages.index', 'message', 'Mensagens'),
+  ('backup.index', 'backup', 'Backup'),
+] %}
+
+<div class="shell">
+  <aside class="sidebar" id="sidebar" aria-label="Navegação principal">
+    <div class="brand">
+      <img src="{{ url_for('static', filename='images/favicon.svg') }}" width="30" height="30" alt="">
+      <span>Mesa do Mestre</span>
+    </div>
+    <nav>
+      {% for endpoint, ic, text in nav %}
+        {% set active = request.blueprint == endpoint.split('.')[0] %}
+        <a href="{{ url_for(endpoint) }}" class="nav__link{% if active %} is-active{% endif %}"{% if active %} aria-current="page"{% endif %}>
+          {{ m.icon(ic) }}<span>{{ text }}</span>
+        </a>
+      {% endfor %}
+    </nav>
+    <div class="sidebar__user">
+      <a class="nav__link{% if request.blueprint == 'auth' %} is-active{% endif %}" href="{{ url_for('auth.account') }}">{{ m.icon('players', 18) }}<span>{{ current_user.name if current_user else 'Conta' }}</span></a>
+      <form method="post" action="{{ url_for('auth.logout') }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button class="nav__link nav__link--btn" type="submit">{{ m.icon('back', 18) }}<span>Sair</span></button></form>
+    </div>
+  </aside>
+  <div class="sidebar-backdrop" data-nav-close hidden></div>
+
+  <div class="main">
+    <header class="topbar">
+      <button class="btn btn--icon nav-toggle" type="button" data-nav-toggle aria-controls="sidebar" aria-expanded="false" aria-label="Abrir menu">{{ m.icon('menu', 22) }}</button>
+      <form class="campaign-switch" method="post" action="{{ url_for('campaigns.select') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        {% set ep = request.endpoint or '' %}
+        {% set stay = request.method == 'GET' and (ep.endswith('.index') or ep.endswith('.panel') or ep.endswith('.timeline')) %}
+        <input type="hidden" name="next" value="{{ request.path if stay else url_for('dashboard.index') }}">
+        <label for="campaign-select" class="sr-only">Campanha atual</label>
+        {% if all_campaigns %}
+          <select id="campaign-select" name="campaign_id" data-autosubmit>
+            {% for c in all_campaigns %}
+              <option value="{{ c.id }}" {% if current_campaign and c.id == current_campaign.id %}selected{% endif %}>{{ c.name }}{% if c.status == 'encerrada' %} (encerrada){% endif %}</option>
+            {% endfor %}
+          </select>
+          <noscript><button class="btn btn--sm">Trocar</button></noscript>
+        {% else %}
+          <span class="muted">Nenhuma campanha</span>
+        {% endif %}
+      </form>
+      <a class="btn btn--primary btn--sm" href="{{ url_for('campaigns.new') }}">{{ m.icon('plus', 16) }}<span class="hide-sm"> Nova campanha</span></a>
+    </header>
+
+    <main id="conteudo" class="content" tabindex="-1">
+      <div class="toasts" aria-live="polite" role="region" aria-label="Notificações">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% for category, message in messages %}
+            <div class="toast toast--{{ category }}" role="{{ 'alert' if category == 'error' else 'status' }}">
+              <span>{{ message }}</span>
+              <button type="button" class="toast__close" data-toast-close aria-label="Fechar">{{ m.icon('close', 16) }}</button>
+            </div>
+          {% endfor %}
+        {% endwith %}
+      </div>
+      {% block content %}{% endblock %}
+    </main>
+  </div>
+</div>
+
+<dialog id="confirm-dialog" class="dialog" aria-labelledby="confirm-title">
+  <form method="dialog">
+    <h2 id="confirm-title">Confirmar ação</h2>
+    <p id="confirm-text"></p>
+    <div class="dialog__actions">
+      <button value="cancel" class="btn btn--ghost">Cancelar</button>
+      <button value="ok" class="btn btn--danger" id="confirm-ok">Confirmar</button>
+    </div>
+  </form>
+</dialog>
+</body>
+</html>

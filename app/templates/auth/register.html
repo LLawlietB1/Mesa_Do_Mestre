@@ -1,0 +1,21 @@
+{% extends 'auth/base.html' %}
+{% import '_macros.html' as m %}
+{% block title %}Criar conta{% endblock %}
+{% block body %}
+<h2>Criar conta</h2>
+{% if mode == 'closed' %}
+  <p>Os cadastros estão fechados no momento. Peça um convite a quem administra este servidor.</p>
+{% else %}
+<form method="post" class="stack-form" novalidate data-loading-form>
+  {{ form.hidden_tag() }}
+  {{ m.field(form.name, full=true) }}
+  {{ m.field(form.email, full=true) }}
+  {{ m.field(form.password, full=true) }}
+  {{ m.field(form.confirm, full=true) }}
+  {{ m.field(form.passphrase, full=true) }}
+  {% if mode == 'invite' %}{{ m.field(form.invite_code, full=true) }}{% endif %}
+  <button class="btn btn--primary" type="submit" data-loading-text="Criando…">{{ m.icon('plus', 16) }} Criar conta</button>
+</form>
+{% endif %}
+<p class="auth__links">Já tem conta? <a href="{{ url_for('auth.login') }}">Entrar</a></p>
+{% endblock %}

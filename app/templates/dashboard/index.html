@@ -1,0 +1,72 @@
+{% extends 'base.html' %}
+{% import '_macros.html' as m %}
+{% block title %}Painel{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <p class="eyebrow">Campanha atual</p>
+    <h1>{{ campaign.name }} {{ m.badge('campaign_status', campaign.status) }}</h1>
+    <p class="muted">{{ [campaign.system, campaign.setting] | select | join(' · ') or 'Sem sistema ou ambientação definidos' }}</p>
+  </div>
+  <div class="page-head__actions">
+    <a class="btn" href="{{ url_for('campaigns.detail', campaign_id=campaign.id) }}">Detalhes da campanha</a>
+  </div>
+</div>
+
+<section class="stats" aria-label="Resumo">
+  <div class="stat card"><span class="stat__n">{{ stats.campaigns }}</span><span class="stat__l">Campanhas</span></div>
+  <div class="stat card"><span class="stat__n">{{ stats.players }}</span><span class="stat__l">Jogadores ativos</span></div>
+  <div class="stat card"><span class="stat__n">{{ stats.characters }}</span><span class="stat__l">Personagens ativos</span></div>
+  <div class="stat card"><span class="stat__n">{{ stats.quests }}</span><span class="stat__l">Missões em andamento</span></div>
+  <div class="stat card stat--wide">
+    <span class="stat__l">Próxima sessão</span>
+    {% if next_session %}
+      <a class="stat__session" href="{{ url_for('sessions.detail', session_id=next_session.id) }}">
+        <strong>Sessão {{ next_session.number }} — {{ next_session.title }}</strong>
+        <span class="muted">{{ next_session.date | data }}</span>
+      </a>
+    {% else %}
+      <span class="muted">Nenhuma sessão agendada. <a href="{{ url_for('sessions.new') }}">Agendar</a></span>
+    {% endif %}
+  </div>
+</section>
+
+<section class="quick" aria-label="Atalhos">
+  <a class="btn" href="{{ url_for('xp.panel') }}">{{ m.icon('xp', 16) }} Ajustar XP</a>
+  <a class="btn" href="{{ url_for('sessions.new') }}">{{ m.icon('sessions', 16) }} Nova sessão</a>
+  <a class="btn" href="{{ url_for('notes.new') }}">{{ m.icon('notes', 16) }} Nova nota</a>
+  <a class="btn" href="{{ url_for('characters.new') }}">{{ m.icon('character', 16) }} Novo personagem</a>
+  <a class="btn" href="{{ url_for('npcs.new') }}">{{ m.icon('npc', 16) }} Novo NPC</a>
+  <a class="btn" href="{{ url_for('quests.new') }}">{{ m.icon('quest', 16) }} Nova missão</a>
+</section>
+
+<section>
+  <h2>Party</h2>
+  {% if party %}
+    <div class="grid grid--cards">{% for c in party %}{{ m.character_card(c) }}{% endfor %}</div>
+  {% else %}
+    {{ m.empty('Nenhum personagem ativo', 'Cadastre jogadores e seus personagens para formar a party desta campanha.', url_for('characters.new'), 'Novo personagem') }}
+  {% endif %}
+</section>
+
+<div class="two-col">
+  <section class="card">
+    <div class="card__head"><h2>Notas recentes</h2><a href="{{ url_for('notes.index') }}">Ver todas</a></div>
+    {% for n in notes %}
+      <a class="list-row" href="{{ url_for('notes.edit', note_id=n.id) }}">
+        <span>{% if n.important %}<span class="star" title="Importante">★</span> {% endif %}{{ n.title }}</span>
+        <span class="muted">{{ n.updated_at | datahora }}</span>
+      </a>
+    {% else %}<p class="muted">Nenhuma nota ainda.</p>{% endfor %}
+  </section>
+  <section class="card">
+    <div class="card__head"><h2>Últimos acontecimentos</h2><a href="{{ url_for('sessions.timeline') }}">Linha do tempo</a></div>
+    {% for e in events %}
+      <a class="list-row list-row--col" href="{{ url_for('sessions.detail', session_id=e.session_id) }}">
+        <span>{{ e.description | truncate(110) }}</span>
+        <span class="muted">Sessão {{ e.session.number }}{% if e.character %} · {{ e.character.name }}{% endif %}</span>
+      </a>
+    {% else %}<p class="muted">Registre acontecimentos nas sessões para vê-los aqui.</p>{% endfor %}
+  </section>
+</div>
+{% endblock %}

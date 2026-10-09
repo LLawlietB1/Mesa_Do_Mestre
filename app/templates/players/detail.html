@@ -1,0 +1,56 @@
+{% extends 'base.html' %}
+{% import '_macros.html' as m %}
+{% block title %}{{ player.display_name }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <a class="back-link" href="{{ url_for('players.index') }}">{{ m.icon('back', 16) }} Jogadores</a>
+    <h1>{{ player.display_name }} {{ m.badge('player_status', player.status) }}</h1>
+    <p class="muted">Cadastrado em {{ player.created_at | data }}</p>
+  </div>
+  <div class="page-head__actions">
+    {% if player.phone and player.messaging_consent %}<a class="btn" href="{{ url_for('messages.index', jogador=player.id) }}">{{ m.icon('message', 16) }} Enviar mensagem</a>{% endif %}
+    <a class="btn" href="{{ url_for('players.edit', player_id=player.id) }}">{{ m.icon('edit', 16) }} Editar</a>
+  </div>
+</div>
+
+<div class="two-col">
+  <section class="card">
+    <h2>Dados</h2>
+    <dl class="kv">
+      <dt>Nome real</dt><dd>{{ player.real_name or '—' }}</dd>
+      <dt>Apelido</dt><dd>{{ player.nickname or '—' }}</dd>
+      <dt>E-mail</dt><dd>{{ player.email or '—' }}</dd>
+      <dt>Telefone</dt><dd>{{ player.phone or '—' }}{% if player.phone and not player.messaging_consent %} <span class="muted">(sem consentimento para mensagens)</span>{% endif %}</dd>
+    </dl>
+    {% if player.notes %}<h3>Observações</h3><p>{{ player.notes | texto }}</p>{% endif %}
+  </section>
+  <section class="card">
+    <h2>Personagens</h2>
+    {% for c in player.characters %}
+      <a class="list-row" href="{{ url_for('characters.detail', character_id=c.id) }}"><span>{{ c.name }} <span class="muted">· {{ c.campaign.name }}</span></span>{{ m.badge('character_status', c.status) }}</a>
+    {% else %}<p class="muted">Nenhum personagem.</p>{% endfor %}
+  </section>
+</div>
+
+<section class="card">
+  <h2>Histórico de participação</h2>
+  {% for ms in memberships %}
+    <div class="list-row">
+      <a href="{{ url_for('campaigns.detail', campaign_id=ms.campaign_id) }}">{{ ms.campaign.name }}</a>
+      <span class="muted">desde {{ ms.joined_at | data }}{% if ms.status != 'ativo' %} · saiu em {{ ms.left_at | data }}{% endif %}</span>
+    </div>
+  {% else %}<p class="muted">Ainda não participa de campanhas.</p>{% endfor %}
+</section>
+
+<section class="card danger-zone">
+  <h2>Status e exclusão</h2>
+  <div class="row">
+    {% for k, l in choices.player_status if k != player.status %}
+      {{ m.post_button(url_for('players.set_status', player_id=player.id), 'Marcar como ' ~ l|lower, fields={'status': k}) }}
+    {% endfor %}
+    {{ m.post_button(url_for('players.delete', player_id=player.id), 'Excluir cadastro', confirm='Excluir o cadastro de ' ~ player.display_name ~ '? Esta ação não pode ser desfeita.', cls='btn btn--danger btn--sm', icon_name='trash') }}
+  </div>
+  <small class="field__hint">Jogadores com personagens não podem ser excluídos; arquive-os para preservar o histórico.</small>
+</section>
+{% endblock %}

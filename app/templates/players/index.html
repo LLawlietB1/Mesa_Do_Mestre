@@ -1,0 +1,39 @@
+{% extends 'base.html' %}
+{% import '_macros.html' as m %}
+{% block title %}Jogadores{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>Jogadores</h1>
+  <a class="btn btn--primary" href="{{ url_for('players.new') }}">{{ m.icon('plus', 16) }} Novo jogador</a>
+</div>
+<form class="filters card" method="get">
+  <div class="field"><label class="field__label" for="q">Buscar</label><input id="q" name="q" value="{{ q }}" placeholder="Nome, apelido…"></div>
+  <div class="field"><label class="field__label" for="status">Status</label>
+    <select id="status" name="status" data-autosubmit><option value="">Todos</option>
+      {% for k, l in choices.player_status %}<option value="{{ k }}" {% if status == k %}selected{% endif %}>{{ l }}</option>{% endfor %}
+    </select></div>
+  <div class="field"><label class="field__label" for="campanha">Campanha</label>
+    <select id="campanha" name="campanha" data-autosubmit><option value="">Todas</option>
+      {% for c in all_campaigns %}<option value="{{ c.id }}" {% if campaign_id == c.id %}selected{% endif %}>{{ c.name }}</option>{% endfor %}
+    </select></div>
+  {{ m.filter_actions(url_for('players.index')) }}
+</form>
+{% if players %}
+<div class="grid grid--cards">
+  {% for p in players %}
+  <article class="card">
+    <div class="row row--between">
+      <h3><a href="{{ url_for('players.detail', player_id=p.id) }}">{{ p.display_name }}</a></h3>{{ m.badge('player_status', p.status) }}
+    </div>
+    <p class="muted">{{ p.nickname or '' }}</p>
+    <p class="muted">{{ p.characters | length }} personagem(ns) · {{ p.memberships | selectattr('status', 'equalto', 'ativo') | list | length }} campanha(s) ativa(s)</p>
+    <div class="card__foot"><a class="btn btn--sm btn--ghost" href="{{ url_for('players.detail', player_id=p.id) }}">Abrir perfil</a></div>
+  </article>
+  {% endfor %}
+</div>
+{% elif q or status or campaign_id %}
+  {{ m.empty('Nada encontrado', 'Nenhum jogador corresponde aos filtros.') }}
+{% else %}
+  {{ m.empty('Nenhum jogador cadastrado', 'Cadastre os jogadores da sua mesa. Só o nome de exibição é obrigatório.', url_for('players.new'), 'Cadastrar jogador') }}
+{% endif %}
+{% endblock %}

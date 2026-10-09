@@ -1,0 +1,34 @@
+{% extends 'base.html' %}
+{% import '_macros.html' as m %}
+{% block title %}Histórico de XP — {{ character.name }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <a class="back-link" href="{{ url_for('characters.detail', character_id=character.id) }}">{{ m.icon('back', 16) }} {{ character.name }}</a>
+    <h1>Histórico de XP</h1>
+    <p class="muted">Atual: <strong>{{ character.xp_percent }}%</strong> · ciclo {{ character.xp_cycle }}</p>
+  </div>
+</div>
+{% if entries %}
+<div class="card table-wrap">
+  <table class="table table--stack">
+    <thead><tr><th>Data</th><th>Origem</th><th>Antes</th><th>Depois</th><th>Variação</th><th>Ciclo</th><th>Motivo</th></tr></thead>
+    <tbody>
+    {% for h in entries %}
+      <tr>
+        <td data-label="Data">{{ h.created_at | datahora }}</td>
+        <td data-label="Origem">{{ rotulo('xp_origins', h.origin) }}</td>
+        <td data-label="Antes">{{ h.previous_percent }}%</td>
+        <td data-label="Depois">{{ h.new_percent }}%</td>
+        <td data-label="Variação" class="{{ 'pos' if h.delta > 0 else 'neg' }}">{{ '%+d' % h.delta }}%{% if h.requested_delta is not none and h.requested_delta != h.delta %} <span class="muted">(pedido {{ '%+d' % h.requested_delta }}%)</span>{% endif %}</td>
+        <td data-label="Ciclo">{{ h.cycle }}</td>
+        <td data-label="Motivo">{{ h.reason or '—' }}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+  {{ m.empty('Sem alterações registradas', 'Quando você ajustar a barra de XP, cada mudança aparecerá aqui.') }}
+{% endif %}
+{% endblock %}

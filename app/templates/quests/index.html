@@ -1,0 +1,46 @@
+{% extends 'base.html' %}
+{% import '_macros.html' as m %}
+{% block title %}Missões{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><h1>Missões</h1><p class="muted">{{ current_campaign.name }}</p></div>
+  <a class="btn btn--primary" href="{{ url_for('quests.new') }}">{{ m.icon('plus', 16) }} Nova missão</a>
+</div>
+<form class="filters card" method="get">
+  <div class="field"><label class="field__label" for="q">Buscar</label><input id="q" name="q" value="{{ q }}" placeholder="Título ou descrição"></div>
+  <div class="field"><label class="field__label" for="status">Status</label>
+    <select id="status" name="status" data-autosubmit><option value="">Todos</option>
+      {% for k, l in choices.quest_status %}<option value="{{ k }}" {% if status == k %}selected{% endif %}>{{ l }}</option>{% endfor %}
+    </select></div>
+  <div class="field"><label class="field__label" for="personagem">Personagem</label>
+    <select id="personagem" name="personagem" data-autosubmit><option value="">Todos</option>
+      {% for c in characters %}<option value="{{ c.id }}" {% if character_id == c.id %}selected{% endif %}>{{ c.name }}</option>{% endfor %}
+    </select></div>
+  {{ m.filter_actions(url_for('quests.index')) }}
+</form>
+{% if quests %}
+<div class="grid grid--cards">
+  {% for q in quests %}
+  <article class="card">
+    <div class="row row--between"><h3><a href="{{ url_for('quests.detail', quest_id=q.id) }}">{{ q.title }}</a></h3>{{ m.badge('quest_status', q.status) }}</div>
+    {% set done = q.objectives | selectattr('done') | list | length %}
+    <p class="muted">Objetivos: {{ done }}/{{ q.objectives | length }}{% if q.deadline %} · prazo {{ q.deadline | data }}{% endif %}</p>
+    {% if q.npc %}<p class="muted">NPC: {{ q.npc.name }}</p>{% endif %}
+    <div class="card__foot">
+      <form method="post" action="{{ url_for('quests.set_status', quest_id=q.id) }}" class="inline-form" data-autosubmit-form>
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="next" value="{{ request.full_path.rstrip('?') }}">
+        <label class="sr-only" for="st-{{ q.id }}">Alterar status</label>
+        <select id="st-{{ q.id }}" name="status" data-autosubmit>
+          {% for k, l in choices.quest_status %}<option value="{{ k }}" {% if q.status == k %}selected{% endif %}>{{ l }}</option>{% endfor %}
+        </select>
+      </form>
+    </div>
+  </article>
+  {% endfor %}
+</div>
+{% elif q or status or character_id %}
+  {{ m.empty('Nenhuma missão encontrada', 'Ajuste ou limpe os filtros.') }}
+{% else %}
+  {{ m.empty('Nenhuma missão ainda', 'Organize objetivos e recompensas da campanha.', url_for('quests.new'), 'Criar missão') }}
+{% endif %}
+{% endblock %}

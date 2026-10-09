@@ -1,0 +1,9 @@
+.venv
+instance
+tests
+migrations
+__pycache__
+.pytest_cache
+*.md
+setup.ps1
+.env

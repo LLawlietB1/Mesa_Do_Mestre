@@ -1,0 +1,15 @@
+{% extends 'auth/base.html' %}
+{% import '_macros.html' as m %}
+{% block title %}Entrar{% endblock %}
+{% block body %}
+<h2>Entrar</h2>
+<form method="post" class="stack-form" novalidate data-loading-form>
+  {{ form.hidden_tag() }}
+  <input type="hidden" name="next" value="{{ request.args.get('next', '') }}">
+  {{ m.field(form.email, full=true) }}
+  {{ m.field(form.password, full=true) }}
+  <button class="btn btn--primary" type="submit" data-loading-text="Entrando…">{{ m.icon('lock', 16) }} Entrar</button>
+</form>
+<p class="auth__links"><a href="{{ url_for('auth.reset') }}">Esqueci minha senha</a>
+  {% if mode != 'closed' %} · <a href="{{ url_for('auth.register') }}">Criar conta</a>{% endif %}</p>
+{% endblock %}

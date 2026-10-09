@@ -1,0 +1,33 @@
+{% extends 'base.html' %}
+{% import '_macros.html' as m %}
+{% block title %}NPCs{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><h1>NPCs</h1><p class="muted">{{ current_campaign.name }}</p></div>
+  <a class="btn btn--primary" href="{{ url_for('npcs.new') }}">{{ m.icon('plus', 16) }} Novo NPC</a>
+</div>
+<form class="filters card" method="get">
+  <div class="field"><label class="field__label" for="q">Buscar</label><input id="q" name="q" value="{{ q }}" placeholder="Nome, apelido, descrição"></div>
+  <div class="field"><label class="field__label" for="status">Status</label>
+    <select id="status" name="status" data-autosubmit><option value="">Todos</option>
+      {% for k, l in choices.npc_status %}<option value="{{ k }}" {% if status == k %}selected{% endif %}>{{ l }}</option>{% endfor %}
+    </select></div>
+  {{ m.filter_actions(url_for('npcs.index')) }}
+</form>
+{% if npcs %}
+<div class="grid grid--cards">
+  {% for n in npcs %}
+  <a class="card char-card" href="{{ url_for('npcs.detail', npc_id=n.id) }}">
+    <div class="char-card__main">{{ m.avatar(n.image, n.name, 'lg') }}
+      <div class="char-card__info"><h3>{{ n.name }}</h3><p class="muted">{{ n.nickname or '' }}</p>{{ m.badge('npc_status', n.status) }}</div>
+    </div>
+    {% if n.description %}<p class="muted">{{ n.description | truncate(110) }}</p>{% endif %}
+  </a>
+  {% endfor %}
+</div>
+{% elif q or status %}
+  {{ m.empty('Nenhum NPC encontrado', 'Ajuste ou limpe os filtros.') }}
+{% else %}
+  {{ m.empty('Nenhum NPC ainda', 'Registre NPCs mesmo antes de decidir como usá-los.', url_for('npcs.new'), 'Cadastrar NPC') }}
+{% endif %}
+{% endblock %}

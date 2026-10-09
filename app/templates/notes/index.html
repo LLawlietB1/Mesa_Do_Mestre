@@ -1,0 +1,64 @@
+{% extends 'base.html' %}
+{% import '_macros.html' as m %}
+{% block title %}Notas privadas{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><h1>Notas privadas</h1><p class="muted">Visíveis só para o mestre, dentro do sistema.</p></div>
+  <a class="btn btn--primary" href="{{ url_for('notes.new') }}">{{ m.icon('plus', 16) }} Nova nota</a>
+</div>
+<form class="filters card" method="get">
+  <div class="field"><label class="field__label" for="q">Buscar no título e conteúdo</label><input id="q" name="q" value="{{ q }}"></div>
+  <div class="field"><label class="field__label" for="categoria">Categoria</label>
+    <select id="categoria" name="categoria" data-autosubmit><option value="">Todas</option>
+      {% for k, l in choices.note_categories %}<option value="{{ k }}" {% if category == k %}selected{% endif %}>{{ l }}</option>{% endfor %}
+    </select></div>
+  <div class="field"><label class="field__label" for="campanha">Campanha</label>
+    <select id="campanha" name="campanha" data-autosubmit>
+      <option value="" {% if not scope %}selected{% endif %}>Atual ({{ current_campaign.name }})</option>
+      <option value="todas" {% if scope == 'todas' %}selected{% endif %}>Todas</option>
+      {% for c in all_campaigns if c.id != current_campaign.id %}<option value="{{ c.id }}" {% if scope == c.id|string %}selected{% endif %}>{{ c.name }}</option>{% endfor %}
+    </select></div>
+  <div class="field"><label class="field__label" for="personagem">Personagem</label>
+    <select id="personagem" name="personagem" data-autosubmit><option value="">Todos</option>
+      {% for c in characters %}<option value="{{ c.id }}" {% if character_id == c.id %}selected{% endif %}>{{ c.name }}</option>{% endfor %}
+    </select></div>
+  <div class="field"><label class="field__label" for="arquivadas">Arquivamento</label>
+    <select id="arquivadas" name="arquivadas" data-autosubmit>
+      {% for k, l in [('nao', 'Ativas'), ('sim', 'Arquivadas'), ('todas', 'Todas')] %}<option value="{{ k }}" {% if archived == k %}selected{% endif %}>{{ l }}</option>{% endfor %}
+    </select></div>
+  <div class="field"><label class="field__label" for="ordem">Ordenar</label>
+    <select id="ordem" name="ordem" data-autosubmit>
+      {% for k, l in [('recentes', 'Atualizadas recentemente'), ('antigas', 'Mais antigas'), ('criacao', 'Data de criação'), ('titulo', 'Título')] %}<option value="{{ k }}" {% if order == k %}selected{% endif %}>{{ l }}</option>{% endfor %}
+    </select></div>
+  {{ m.filter_actions(url_for('notes.index')) }}
+</form>
+
+{% if notes %}
+<div class="grid grid--cards grid--wide">
+  {% for n in notes %}
+  <article class="card note{% if n.important %} note--important{% endif %}{% if n.archived %} note--archived{% endif %}">
+    <div class="row row--between">
+      <h3>{% if n.important %}<span class="star" title="Importante">★</span> {% endif %}{{ n.title }}</h3>
+      <span class="badge">{{ rotulo('note_categories', n.category) }}</span>
+    </div>
+    <p class="note__content">{{ n.content | truncate(280) | texto }}</p>
+    <p class="muted">
+      {% if scope == 'todas' or scope.isdigit() %}{{ n.campaign.name }} · {% endif %}
+      {% if n.character %}{{ n.character.name }} · {% elif n.player %}{{ n.player.display_name }} · {% endif %}
+      Atualizada {{ n.updated_at | datahora }}
+    </p>
+    <div class="card__foot">
+      <a class="btn btn--sm" href="{{ url_for('notes.edit', note_id=n.id) }}">{{ m.icon('edit', 14) }} Editar</a>
+      {{ m.post_button(url_for('notes.toggle', note_id=n.id, flag='important', next=request.full_path.rstrip('?')), '', icon_name='star', title='Alternar importância') }}
+      {{ m.post_button(url_for('notes.toggle', note_id=n.id, flag='archived', next=request.full_path.rstrip('?')), '', icon_name='archive', title=('Desarquivar' if n.archived else 'Arquivar')) }}
+      {{ m.post_button(url_for('notes.delete', note_id=n.id), '', confirm='Excluir a nota «' ~ n.title ~ '»? Esta ação não pode ser desfeita.', icon_name='trash', title='Excluir', cls='btn btn--danger btn--sm') }}
+    </div>
+  </article>
+  {% endfor %}
+</div>
+{% elif q or category or character_id or scope or archived != 'nao' %}
+  {{ m.empty('Nenhuma nota encontrada', 'Ajuste ou limpe os filtros.') }}
+{% else %}
+  {{ m.empty('Nenhuma nota ainda', 'Registre segredos, ganchos e observações sobre jogadores e personagens.', url_for('notes.new'), 'Criar nota') }}
+{% endif %}
+{% endblock %}

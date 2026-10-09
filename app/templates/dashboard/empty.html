@@ -1,0 +1,7 @@
+{% extends 'base.html' %}
+{% import '_macros.html' as m %}
+{% block title %}Bem-vindo{% endblock %}
+{% block content %}
+{{ m.empty('Bem-vindo à Mesa do Mestre', 'Você ainda não tem campanhas. Crie a primeira para começar a cadastrar jogadores, personagens, sessões, NPCs e missões.', url_for('campaigns.new'), 'Criar primeira campanha') }}
+<p class="center muted">Já tem um backup? Restaure-o em <a href="{{ url_for('backup.index') }}">Backup</a>.</p>
+{% endblock %}

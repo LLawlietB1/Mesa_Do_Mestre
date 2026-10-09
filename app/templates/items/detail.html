@@ -1,0 +1,37 @@
+{% extends 'base.html' %}
+{% import '_macros.html' as m %}
+{% block title %}{{ item.name }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <a class="back-link" href="{{ url_for('items.index') }}">{{ m.icon('back', 16) }} Inventário</a>
+    <h1>{{ item.name }} <span class="badge">{{ rotulo('item_categories', item.category) }}</span></h1>
+    <p class="muted">{{ item.campaign.name }} · registrado em {{ item.created_at | data }} · total {{ item.total_quantity }}</p>
+  </div>
+  <div class="page-head__actions">
+    <a class="btn" href="{{ url_for('items.edit', item_id=item.id) }}">{{ m.icon('edit', 16) }} Editar</a>
+    {{ m.post_button(url_for('items.delete', item_id=item.id), 'Excluir', confirm='Excluir o item «' ~ item.name ~ '» e suas atribuições?', cls='btn btn--danger', icon_name='trash') }}
+  </div>
+</div>
+{% if item.description %}<section class="card"><h2>Descrição</h2><p>{{ item.description | texto }}</p></section>{% endif %}
+{% if item.notes %}<section class="card"><h2>Observações</h2><p>{{ item.notes | texto }}</p></section>{% endif %}
+
+<section class="card">
+  <h2>Quem possui</h2>
+  {% for h in item.holdings %}
+    <div class="list-row">
+      <span><a href="{{ url_for('characters.detail', character_id=h.character_id) }}">{{ h.character.name }}</a> — ×{{ h.quantity }}
+        {% if h.origin %}<span class="muted">· origem: {{ h.origin }}</span>{% endif %}
+        {% if h.quest %}<span class="muted">· missão: <a href="{{ url_for('quests.detail', quest_id=h.quest_id) }}">{{ h.quest.title }}</a></span>{% endif %}
+        {% if h.notes %}<br><span class="muted">{{ h.notes }}</span>{% endif %}</span>
+      {{ m.post_button(url_for('items.delete_holding', item_id=item.id, holding_id=h.id), '', confirm='Remover esta atribuição?', icon_name='trash', title='Remover atribuição') }}
+    </div>
+  {% else %}<p class="muted">Ninguém possui este item (tesouro do grupo / sem dono).</p>{% endfor %}
+  <form method="post" action="{{ url_for('items.add_holding', item_id=item.id) }}" class="stack-form form__grid" data-loading-form>
+    {{ holding_form.hidden_tag() }}
+    {{ m.field(holding_form.character_id) }}{{ m.field(holding_form.quantity) }}{{ m.field(holding_form.origin) }}{{ m.field(holding_form.quest_id) }}
+    {{ m.field(holding_form.notes, full=true) }}
+    <div class="field--full"><button class="btn btn--primary btn--sm" type="submit">{{ m.icon('plus', 14) }} Atribuir a personagem</button></div>
+  </form>
+</section>
+{% endblock %}

@@ -1,0 +1,79 @@
+{% extends 'base.html' %}
+{% import '_macros.html' as m %}
+{% block title %}{{ character.name }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div class="row">
+    {{ m.avatar(character.portrait, character.name, 'xl') }}
+    <div>
+      <a class="back-link" href="{{ url_for('characters.index') }}">{{ m.icon('back', 16) }} Personagens</a>
+      <h1>{{ character.name }} {{ m.badge('character_status', character.status) }}</h1>
+      <p class="muted">Jogador: <a href="{{ url_for('players.detail', player_id=character.player_id) }}">{{ character.player.display_name }}</a>
+        · Campanha: <a href="{{ url_for('campaigns.detail', campaign_id=character.campaign_id) }}">{{ character.campaign.name }}</a></p>
+    </div>
+  </div>
+  <div class="page-head__actions">
+    <a class="btn" href="{{ url_for('notes.new', personagem=character.id) }}">{{ m.icon('notes', 16) }} Nota</a>
+    <a class="btn" href="{{ url_for('characters.edit', character_id=character.id) }}">{{ m.icon('edit', 16) }} Editar</a>
+  </div>
+</div>
+
+<section class="card">{{ m.xp_widget(character) }}
+  <p><a href="{{ url_for('xp.history', character_id=character.id) }}">{{ m.icon('history', 16) }} Histórico completo de XP</a></p>
+  {% if history %}
+  <ul class="history-mini">
+    {% for h in history %}<li><span>{{ h.created_at | datahora }}</span> <strong>{{ h.previous_percent }}% → {{ h.new_percent }}%</strong> <span class="muted">{{ h.reason or rotulo('xp_origins', h.origin) }}</span></li>{% endfor %}
+  </ul>
+  {% endif %}
+</section>
+
+<div class="two-col">
+  <section class="card">
+    <h2>Ficha</h2>
+    <dl class="kv">
+      <dt>Sistema</dt><dd>{{ character.system or '—' }}</dd>
+      <dt>Raça / espécie</dt><dd>{{ character.race or '—' }}</dd>
+      <dt>Classe / arquétipo</dt><dd>{{ character.char_class or '—' }}</dd>
+      <dt>Nível</dt><dd>{{ character.level if character.level is not none else '—' }}</dd>
+      <dt>Criado em</dt><dd>{{ character.created_at | data }}</dd>
+      {% for k, v in character.extra.items() %}<dt>{{ k }}</dt><dd>{{ v }}</dd>{% endfor %}
+    </dl>
+  </section>
+  <section class="card">
+    <h2>Status</h2>
+    <p class="muted">Mudar o status não apaga nenhum histórico.</p>
+    <div class="row">
+      {% for k, l in choices.character_status if k != character.status %}
+        {{ m.post_button(url_for('characters.set_status', character_id=character.id), l, fields={'status': k}) }}
+      {% endfor %}
+    </div>
+  </section>
+</div>
+
+{% for title, text in [('História', character.backstory), ('Personalidade', character.personality), ('Objetivos', character.goals), ('Antecedentes', character.background), ('Observações do mestre', character.master_notes)] if text %}
+  <section class="card"><h2>{{ title }}</h2><p>{{ text | texto }}</p></section>
+{% endfor %}
+
+<div class="two-col">
+  <section class="card"><h2>Missões</h2>
+    {% for q in quests %}<a class="list-row" href="{{ url_for('quests.detail', quest_id=q.id) }}"><span>{{ q.title }}</span>{{ m.badge('quest_status', q.status) }}</a>{% else %}<p class="muted">Sem missões.</p>{% endfor %}
+  </section>
+  <section class="card"><h2>Itens</h2>
+    {% for h in items %}<a class="list-row" href="{{ url_for('items.detail', item_id=h.item_id) }}"><span>{{ h.item.name }}</span><span class="muted">×{{ h.quantity }}</span></a>{% else %}<p class="muted">Sem itens.</p>{% endfor %}
+  </section>
+  <section class="card"><h2>Relações com NPCs</h2>
+    {% for r in relations %}<a class="list-row" href="{{ url_for('npcs.detail', npc_id=r.npc_id) }}"><span>{{ r.npc.name }}</span><span class="muted">{{ rotulo('npc_relations', r.kind) }}</span></a>{% else %}<p class="muted">Sem relações.</p>{% endfor %}
+  </section>
+  <section class="card"><h2>Sessões</h2>
+    {% for s in sessions %}<a class="list-row" href="{{ url_for('sessions.detail', session_id=s.id) }}"><span>Sessão {{ s.number }} — {{ s.title }}</span><span class="muted">{{ s.date | data }}</span></a>{% else %}<p class="muted">Sem participações registradas.</p>{% endfor %}
+  </section>
+</div>
+
+<section class="card"><h2>Notas privadas</h2>
+  {% for n in notes %}<a class="list-row" href="{{ url_for('notes.edit', note_id=n.id) }}"><span>{{ n.title }}</span><span class="muted">{{ rotulo('note_categories', n.category) }}</span></a>{% else %}<p class="muted">Sem notas para este personagem.</p>{% endfor %}
+</section>
+
+<section class="card danger-zone">
+  {{ m.post_button(url_for('characters.delete', character_id=character.id), 'Excluir personagem', confirm='Excluir ' ~ character.name ~ ' e todo o seu histórico de XP? Prefira mudar o status para «aposentado» ou «morto». Esta ação não pode ser desfeita.', cls='btn btn--danger btn--sm', icon_name='trash') }}
+</section>
+{% endblock %}

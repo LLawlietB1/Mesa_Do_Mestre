@@ -1,0 +1,30 @@
+{% extends 'base.html' %}
+{% import '_macros.html' as m %}
+{% block title %}Revisar mensagens{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <a class="back-link" href="{{ url_for('messages.index') }}">{{ m.icon('back', 16) }} Mensagens</a>
+    <h1>Revisar e enviar</h1>
+    <p class="muted">Edite o texto se quiser. <strong>WhatsApp</strong> e <strong>SMS</strong> abrem o aplicativo do seu aparelho com a mensagem pronta — você só confirma o envio.</p>
+  </div>
+</div>
+
+<div class="stack" data-msg-root data-send-url="{{ url_for('messages.send') }}">
+  {% for d in drafts %}
+  <article class="card msg" data-msg data-phone="{{ d.player.phone }}" data-player-id="{{ d.player.id }}">
+    <div class="row row--between"><h3>{{ d.player.display_name }} <span class="muted">{{ d.player.phone }}</span></h3><span class="muted"><span data-msg-count>{{ d.text|length }}</span>/{{ max_body }}</span></div>
+    <label class="sr-only" for="msg-{{ d.player.id }}">Mensagem para {{ d.player.display_name }}</label>
+    <textarea id="msg-{{ d.player.id }}" rows="7" maxlength="{{ max_body }}" data-msg-text>{{ d.text }}</textarea>
+    <div class="card__foot">
+      <a class="btn btn--primary btn--sm" data-msg-wa href="{{ wa_link(d.player.phone, d.text) }}" target="_blank" rel="noopener noreferrer">{{ m.icon('message', 16) }} WhatsApp</a>
+      <a class="btn btn--sm" data-msg-sms href="{{ sms_link(d.player.phone, d.text) }}">{{ m.icon('send', 16) }} SMS</a>
+      <button type="button" class="btn btn--sm btn--ghost" data-msg-copy>Copiar texto</button>
+      {% if server.whatsapp %}<button type="button" class="btn btn--sm btn--ghost" data-msg-send="whatsapp">Enviar WhatsApp pelo servidor</button>{% endif %}
+      {% if server.sms %}<button type="button" class="btn btn--sm btn--ghost" data-msg-send="sms">Enviar SMS pelo servidor</button>{% endif %}
+    </div>
+    <p class="xp__status" data-msg-status role="status" aria-live="polite"></p>
+  </article>
+  {% endfor %}
+</div>
+{% endblock %}

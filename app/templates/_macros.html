@@ -1,0 +1,152 @@
+{# Componentes reutilizáveis #}
+{% set ICONS = {
+  'home': '<path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/>',
+  'campaign': '<path d="M4 4h12a4 4 0 0 1 4 4v12H8a4 4 0 0 1-4-4z"/><path d="M8 8h8"/>',
+  'players': '<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c0-3.6 2.9-6 6.5-6s6.5 2.4 6.5 6"/><path d="M16 5a3.5 3.5 0 0 1 0 6.5M18 14c2 .7 3.5 2.4 3.5 6"/>',
+  'character': '<path d="M12 3l2.5 5 5.5.8-4 3.9.9 5.5L12 15.6 7.1 18.2 8 12.7 4 8.8l5.5-.8z"/>',
+  'xp': '<path d="M3 20h18"/><path d="M6 20V12M12 20V6M18 20V9"/>',
+  'notes': '<path d="M6 3h9l4 4v14H6z"/><path d="M14 3v5h5M9 13h7M9 17h5"/>',
+  'sessions': '<rect x="3.5" y="5" width="17" height="15" rx="2"/><path d="M3.5 10h17M8 3v4M16 3v4"/>',
+  'npc': '<circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7"/>',
+  'quest': '<path d="M5 21V4m0 0h11l-2 4 2 4H5"/>',
+  'items': '<path d="M4 8l8-4 8 4v8l-8 4-8-4z"/><path d="M4 8l8 4 8-4M12 12v8"/>',
+  'backup': '<ellipse cx="12" cy="6" rx="8" ry="3"/><path d="M4 6v12c0 1.7 3.6 3 8 3s8-1.3 8-3V6M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3"/>',
+  'plus': '<path d="M12 5v14M5 12h14"/>',
+  'search': '<circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4-4"/>',
+  'edit': '<path d="M4 20h4L19 9l-4-4L4 16z"/>',
+  'trash': '<path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/>',
+  'star': '<path d="M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1L3.2 9.5l6.1-.9z"/>',
+  'archive': '<rect x="3" y="4" width="18" height="5" rx="1"/><path d="M5 9v10h14V9M10 13h4"/>',
+  'menu': '<path d="M4 6h16M4 12h16M4 18h16"/>',
+  'close': '<path d="M6 6l12 12M18 6L6 18"/>',
+  'check': '<path d="M5 12.5l4.5 4.5L19 7"/>',
+  'back': '<path d="M15 5l-7 7 7 7"/>',
+  'history': '<path d="M4 12a8 8 0 1 0 3-6.2M4 4v4h4"/><path d="M12 8v4l3 2"/>',
+  'message': '<path d="M4 5h16v11H9l-5 4z"/><path d="M8 9h8M8 12h5"/>',
+  'send': '<path d="M21 3L10 14M21 3l-7 18-4-7-7-4z"/>',
+  'lock': '<rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>',
+} %}
+
+{% macro icon(name, size=18) -%}
+<svg class="icon" width="{{ size }}" height="{{ size }}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">{{ ICONS[name]|safe }}</svg>
+{%- endmacro %}
+
+{% macro badge(kind, key) -%}
+<span class="badge badge--{{ key }}">{{ rotulo(kind, key) }}</span>
+{%- endmacro %}
+
+{% macro avatar(image, name, size='md') -%}
+{% if image %}<img class="avatar avatar--{{ size }}" src="{{ url_for('media.serve', filename=image) }}" alt="" loading="lazy">
+{% else %}<span class="avatar avatar--{{ size }} avatar--fallback" aria-hidden="true">{{ (name or '?')[:1]|upper }}</span>{% endif %}
+{%- endmacro %}
+
+{% macro empty(title, text, action_url=None, action_label=None) -%}
+<div class="empty">
+  <div class="empty__sigil" aria-hidden="true">✦</div>
+  <h3>{{ title }}</h3>
+  <p>{{ text }}</p>
+  {% if action_url %}<a class="btn btn--primary" href="{{ action_url }}">{{ icon('plus', 16) }} {{ action_label }}</a>{% endif %}
+</div>
+{%- endmacro %}
+
+{# Formulário POST pequeno com CSRF e confirmação opcional #}
+{% macro post_button(url, label, confirm=None, cls='btn btn--ghost btn--sm', icon_name=None, fields=None, title=None) -%}
+<form method="post" action="{{ url }}" class="inline-form"{% if confirm %} data-confirm="{{ confirm }}"{% endif %}>
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  {% for k, v in (fields or {}).items() %}<input type="hidden" name="{{ k }}" value="{{ v }}">{% endfor %}
+  <button type="submit" class="{{ cls }}"{% if title %} title="{{ title }}" aria-label="{{ title }}"{% endif %}>{% if icon_name %}{{ icon(icon_name, 16) }}{% endif %}{% if label %} {{ label }}{% endif %}</button>
+</form>
+{%- endmacro %}
+
+{% macro field(f, full=None) -%}
+{% set is_wide = full if full is not none else (f.type in ['TextAreaField', 'IntMultiSelect', 'SelectMultipleField']) %}
+<div class="field{% if is_wide %} field--full{% endif %}{% if f.errors %} field--error{% endif %}{% if f.type == 'BooleanField' %} field--check{% endif %}">
+  {% if f.type == 'BooleanField' %}
+    <label class="check">{{ f(class_='check__input') }} <span>{{ f.label.text }}</span></label>
+  {% elif f.type in ['SelectMultipleField', 'IntMultiSelect'] %}
+    <span class="field__label" id="{{ f.id }}-label">{{ f.label.text }}</span>
+    <div class="checklist" role="group" aria-labelledby="{{ f.id }}-label">
+      {% for value, text in f.choices %}
+        <label class="check"><input type="checkbox" name="{{ f.name }}" value="{{ value }}" {% if value in (f.data or []) %}checked{% endif %}> <span>{{ text }}</span></label>
+      {% else %}<span class="muted">Nenhuma opção disponível nesta campanha.</span>{% endfor %}
+    </div>
+  {% else %}
+    {{ f.label(class_='field__label') }}
+    {% if f.type == 'FileField' %}{{ f(accept='image/png,image/jpeg,image/gif,image/webp') }}
+    {% elif f.type == 'TextAreaField' %}{{ f(rows=5) }}
+    {% else %}{{ f }}{% endif %}
+  {% endif %}
+  {% if f.description %}<small class="field__hint">{{ f.description }}</small>{% endif %}
+  {% for e in f.errors %}<small class="field__error" role="alert">{{ e }}</small>{% endfor %}
+</div>
+{%- endmacro %}
+
+{% macro xp_bar(c, size='md') -%}
+<div class="progress progress--{{ size }}{% if c.xp_percent == 100 %} progress--full{% endif %}" role="progressbar" aria-valuenow="{{ c.xp_percent }}" aria-valuemin="0" aria-valuemax="100" aria-label="Experiência de {{ c.name }}" data-xp-bar>
+  <div class="progress__fill" style="width: {{ c.xp_percent }}%"></div>
+</div>
+{%- endmacro %}
+
+{# Controle completo de XP de um personagem (funciona via fetch; salva no banco) #}
+{% macro xp_widget(c, compact=False) -%}
+<div class="xp" data-xp data-url="{{ url_for('xp.api_apply', character_id=c.id) }}" data-name="{{ c.name }}">
+  <div class="xp__head">
+    <span class="xp__label">Experiência · ciclo <span data-xp-cycle>{{ c.xp_cycle }}</span></span>
+    <strong class="xp__value"><span data-xp-value>{{ c.xp_percent }}</span>%</strong>
+  </div>
+  {{ xp_bar(c, 'lg') }}
+  <div class="xp__full" data-xp-full {% if c.xp_percent != 100 %}hidden{% endif %}>
+    <span>✦ Marco completo! Decida se o personagem subiu de nível.</span>
+    <button type="button" class="btn btn--sm btn--primary" data-xp-action="new_cycle">Iniciar novo ciclo</button>
+  </div>
+  <div class="xp__controls">
+    <div class="btn-group" role="group" aria-label="Ajustes rápidos">
+      <button type="button" class="btn btn--sm" data-xp-action="add" data-xp-value="-10">−10%</button>
+      <button type="button" class="btn btn--sm" data-xp-action="add" data-xp-value="-5">−5%</button>
+      <button type="button" class="btn btn--sm" data-xp-action="add" data-xp-value="5">+5%</button>
+      <button type="button" class="btn btn--sm" data-xp-action="add" data-xp-value="10">+10%</button>
+    </div>
+    <div class="xp__custom">
+      <label class="sr-only" for="xp-custom-{{ c.id }}">Valor personalizado (%)</label>
+      <input id="xp-custom-{{ c.id }}" type="number" inputmode="numeric" min="0" max="100" step="1" placeholder="%" data-xp-input>
+      <button type="button" class="btn btn--sm" data-xp-action="add-input" data-sign="1" title="Somar o valor">＋</button>
+      <button type="button" class="btn btn--sm" data-xp-action="add-input" data-sign="-1" title="Subtrair o valor">−</button>
+      <button type="button" class="btn btn--sm" data-xp-action="set-input" title="Definir exatamente este percentual">Definir</button>
+    </div>
+    <div class="btn-group">
+      <button type="button" class="btn btn--sm btn--ghost" data-xp-action="reset">Zerar</button>
+      <button type="button" class="btn btn--sm btn--ghost" data-xp-action="complete">Completar</button>
+    </div>
+  </div>
+  <p class="xp__status" data-xp-status role="status" aria-live="polite"></p>
+</div>
+{%- endmacro %}
+
+{% macro filter_actions(clear_url) -%}
+<div class="filters__actions">
+  <button class="btn btn--primary btn--sm" type="submit">{{ icon('search', 16) }} Filtrar</button>
+  <a class="btn btn--ghost btn--sm" href="{{ clear_url }}">Limpar filtros</a>
+</div>
+{%- endmacro %}
+
+{% macro character_card(c) -%}
+<article class="card char-card">
+  <a class="char-card__main" href="{{ url_for('characters.detail', character_id=c.id) }}">
+    {{ avatar(c.portrait, c.name, 'lg') }}
+    <div class="char-card__info">
+      <h3>{{ c.name }}</h3>
+      <p class="muted">{{ c.player.display_name }}</p>
+      <p class="char-card__meta">
+        {% set bits = [c.race, c.char_class] | select | list %}
+        {{ bits | join(' · ') }}{% if c.level is not none %}{% if bits %} · {% endif %}Nível {{ c.level }}{% endif %}
+      </p>
+    </div>
+  </a>
+  <div class="char-card__xp">
+    <div class="xp__head"><span class="xp__label">XP</span><strong>{{ c.xp_percent }}%</strong></div>
+    {{ xp_bar(c) }}
+    {% if c.xp_percent == 100 %}<p class="xp__flag">✦ Marco completo</p>{% endif %}
+  </div>
+  <a class="btn btn--sm btn--ghost" href="{{ url_for('characters.detail', character_id=c.id) }}">Abrir perfil</a>
+</article>
+{%- endmacro %}

@@ -1,0 +1,63 @@
+{% extends 'base.html' %}
+{% import '_macros.html' as m %}
+{% block title %}{{ quest.title }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <a class="back-link" href="{{ url_for('quests.index') }}">{{ m.icon('back', 16) }} Missões</a>
+    <h1>{{ quest.title }} {{ m.badge('quest_status', quest.status) }}</h1>
+    <p class="muted">{{ quest.campaign.name }}{% if quest.deadline %} · prazo {{ quest.deadline | data }}{% endif %}{% if quest.npc %} · NPC: <a href="{{ url_for('npcs.detail', npc_id=quest.npc_id) }}">{{ quest.npc.name }}</a>{% endif %}</p>
+  </div>
+  <div class="page-head__actions">
+    <a class="btn" href="{{ url_for('quests.edit', quest_id=quest.id) }}">{{ m.icon('edit', 16) }} Editar</a>
+    {{ m.post_button(url_for('quests.delete', quest_id=quest.id), 'Excluir', confirm='Excluir a missão «' ~ quest.title ~ '»?', cls='btn btn--danger', icon_name='trash') }}
+  </div>
+</div>
+
+<section class="card">
+  <h2>Status</h2>
+  <div class="row">
+    {% for k, l in choices.quest_status if k != quest.status %}{{ m.post_button(url_for('quests.set_status', quest_id=quest.id), l, fields={'status': k}) }}{% endfor %}
+  </div>
+</section>
+
+{% if quest.description %}<section class="card"><h2>Descrição</h2><p>{{ quest.description | texto }}</p></section>{% endif %}
+
+<section class="card">
+  <h2>Objetivos</h2>
+  {% for o in quest.objectives %}
+    <div class="list-row">
+      <form method="post" action="{{ url_for('quests.toggle_objective', quest_id=quest.id, objective_id=o.id) }}" class="inline-form">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button class="check-btn{% if o.done %} is-done{% endif %}" type="submit" aria-pressed="{{ 'true' if o.done else 'false' }}">
+          <span class="check-btn__box">{% if o.done %}{{ m.icon('check', 14) }}{% endif %}</span><span class="{% if o.done %}done{% endif %}">{{ o.description }}</span>
+        </button>
+      </form>
+      {{ m.post_button(url_for('quests.delete_objective', quest_id=quest.id, objective_id=o.id), '', confirm='Remover este objetivo?', icon_name='trash', title='Remover objetivo') }}
+    </div>
+  {% else %}<p class="muted">Nenhum objetivo definido.</p>{% endfor %}
+  <form method="post" action="{{ url_for('quests.add_objective', quest_id=quest.id) }}" class="inline-add" data-loading-form>
+    {{ objective_form.hidden_tag() }}
+    <label class="sr-only" for="{{ objective_form.description.id }}">Novo objetivo</label>
+    {{ objective_form.description(placeholder='Novo objetivo…') }}
+    <button class="btn btn--primary btn--sm" type="submit">Adicionar</button>
+  </form>
+</section>
+
+<div class="two-col">
+  <section class="card"><h2>Personagens relacionados</h2>
+    {% for c in quest.characters %}<a class="list-row" href="{{ url_for('characters.detail', character_id=c.id) }}">{{ c.name }}</a>{% else %}<p class="muted">Nenhum.</p>{% endfor %}</section>
+  <section class="card"><h2>Recompensas previstas</h2>
+    {% if quest.rewards %}<p>{{ quest.rewards | texto }}</p>{% else %}<p class="muted">Nenhuma registrada.</p>{% endif %}
+    <small class="field__hint">Registro administrativo: não altera fichas nem inventários.</small></section>
+</div>
+
+{% if quest.master_notes %}<section class="card"><h2>{{ m.icon('lock', 16) }} Observações privadas</h2><p>{{ quest.master_notes | texto }}</p></section>{% endif %}
+
+<div class="two-col">
+  <section class="card"><h2>Sessões</h2>
+    {% for s in sessions %}<a class="list-row" href="{{ url_for('sessions.detail', session_id=s.id) }}">Sessão {{ s.number }} — {{ s.title }}</a>{% else %}<p class="muted">Não citada em sessões.</p>{% endfor %}</section>
+  <section class="card"><h2>Histórico de status</h2>
+    {% for h in quest.status_history %}<div class="list-row"><span>{{ rotulo('quest_status', h.old_status) if h.old_status else 'Criada' }} → <strong>{{ rotulo('quest_status', h.new_status) }}</strong></span><span class="muted">{{ h.created_at | datahora }}</span></div>{% endfor %}</section>
+</div>
+{% endblock %}

@@ -1,0 +1,51 @@
+{% extends 'base.html' %}
+{% import '_macros.html' as m %}
+{% block title %}Sessões{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><h1>Diário de sessões</h1><p class="muted">{{ current_campaign.name }}</p></div>
+  <div class="page-head__actions">
+    <a class="btn" href="{{ url_for('sessions.timeline') }}">{{ m.icon('history', 16) }} Linha do tempo</a>
+    <a class="btn btn--primary" href="{{ url_for('sessions.new') }}">{{ m.icon('plus', 16) }} Nova sessão</a>
+  </div>
+</div>
+
+{% if upcoming %}
+<section class="card card--accent">
+  <h2>Próximas sessões agendadas</h2>
+  {% for s in upcoming %}<a class="list-row" href="{{ url_for('sessions.detail', session_id=s.id) }}"><span>Sessão {{ s.number }} — {{ s.title }}</span><span>{{ s.date | data }}</span></a>{% endfor %}
+</section>
+{% endif %}
+
+<form class="filters card" method="get">
+  <div class="field"><label class="field__label" for="q">Palavra-chave</label><input id="q" name="q" value="{{ q }}" placeholder="Título, resumo, acontecimentos…"></div>
+  <div class="field"><label class="field__label" for="status">Status</label>
+    <select id="status" name="status" data-autosubmit><option value="">Todos</option>
+      {% for k, l in choices.session_status %}<option value="{{ k }}" {% if status == k %}selected{% endif %}>{{ l }}</option>{% endfor %}
+    </select></div>
+  <div class="field"><label class="field__label" for="de">De</label><input id="de" type="date" name="de" value="{{ d_from }}"></div>
+  <div class="field"><label class="field__label" for="ate">Até</label><input id="ate" type="date" name="ate" value="{{ d_to }}"></div>
+  <div class="field"><label class="field__label" for="ordem">Ordem</label>
+    <select id="ordem" name="ordem" data-autosubmit>
+      <option value="recentes" {% if order != 'antigas' %}selected{% endif %}>Mais recentes primeiro</option>
+      <option value="antigas" {% if order == 'antigas' %}selected{% endif %}>Mais antigas primeiro</option>
+    </select></div>
+  {{ m.filter_actions(url_for('sessions.index')) }}
+</form>
+
+{% if sessions %}
+<div class="stack">
+  {% for s in sessions %}
+  <a class="card session-row" href="{{ url_for('sessions.detail', session_id=s.id) }}">
+    <span class="session-row__n">#{{ s.number }}</span>
+    <span class="session-row__main"><strong>{{ s.title }}</strong><br><span class="muted">{{ s.summary | truncate(140) if s.summary else 'Sem resumo.' }}</span></span>
+    <span class="session-row__meta">{{ s.date | data }}<br>{{ m.badge('session_status', s.status) }}</span>
+  </a>
+  {% endfor %}
+</div>
+{% elif q or status or d_from or d_to %}
+  {{ m.empty('Nenhuma sessão encontrada', 'Ajuste ou limpe os filtros.') }}
+{% else %}
+  {{ m.empty('Nenhuma sessão registrada', 'Registre sessões passadas ou agende a próxima.', url_for('sessions.new'), 'Registrar sessão') }}
+{% endif %}
+{% endblock %}

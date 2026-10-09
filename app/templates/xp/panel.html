@@ -1,0 +1,44 @@
+{% extends 'base.html' %}
+{% import '_macros.html' as m %}
+{% block title %}Experiência{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><h1>Experiência</h1><p class="muted">{{ current_campaign.name }} · barras controladas manualmente, de 0% a 100%.</p></div>
+</div>
+<form class="filters card" method="get">
+  <div class="field"><label class="field__label" for="status">Mostrar personagens</label>
+    <select id="status" name="status" data-autosubmit><option value="todos" {% if status == 'todos' %}selected{% endif %}>Todos</option>
+      {% for k, l in choices.character_status %}<option value="{{ k }}" {% if status == k %}selected{% endif %}>{{ l }}</option>{% endfor %}
+    </select></div>
+</form>
+
+{% if characters %}
+<form method="post" action="{{ url_for('xp.bulk') }}" class="card bulk" id="bulk-form" data-bulk-form>
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <input type="hidden" name="status_filter" value="{{ status }}">
+  <h2>Alteração coletiva</h2>
+  <p class="muted">Marque os personagens abaixo, informe o percentual e escolha aumentar ou reduzir. Cada barra respeita os limites 0–100% e o resultado de cada personagem é registrado no histórico.</p>
+  <div class="bulk__fields">
+    <div class="field"><label class="field__label" for="bulk-amount">Percentual</label><input id="bulk-amount" name="amount" type="number" min="1" max="100" step="1" required placeholder="ex.: 10"></div>
+    <div class="field"><label class="field__label" for="bulk-reason">Motivo (opcional)</label><input id="bulk-reason" name="reason" maxlength="300" placeholder="ex.: fim da sessão 5"></div>
+    <div class="bulk__buttons">
+      <button class="btn btn--primary" type="submit" name="direction" value="up" data-bulk-submit>＋ Aumentar selecionados</button>
+      <button class="btn" type="submit" name="direction" value="down" data-bulk-submit>− Reduzir selecionados</button>
+    </div>
+  </div>
+  <p class="bulk__count" aria-live="polite"><span data-bulk-count>0</span> selecionado(s) · <button type="button" class="link-btn" data-bulk-all>Selecionar todos</button> · <button type="button" class="link-btn" data-bulk-none>Limpar seleção</button></p>
+</form>
+
+<div class="xp-list">
+  {% for c in characters %}
+  <article class="card xp-row">
+    <label class="xp-row__select"><input type="checkbox" name="character_ids" value="{{ c.id }}" form="bulk-form" data-bulk-item data-name="{{ c.name }}"> <span class="sr-only">Selecionar {{ c.name }}</span></label>
+    <a class="xp-row__who" href="{{ url_for('characters.detail', character_id=c.id) }}">{{ m.avatar(c.portrait, c.name, 'md') }}<span><strong>{{ c.name }}</strong><br><span class="muted">{{ c.player.display_name }} · {{ rotulo('character_status', c.status) }}</span></span></a>
+    <div class="xp-row__xp">{{ m.xp_widget(c) }}</div>
+  </article>
+  {% endfor %}
+</div>
+{% else %}
+  {{ m.empty('Nenhum personagem para exibir', 'Crie personagens nesta campanha (ou ajuste o filtro) para controlar a experiência.', url_for('characters.new'), 'Novo personagem') }}
+{% endif %}
+{% endblock %}

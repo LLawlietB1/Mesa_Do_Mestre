@@ -1,0 +1,42 @@
+{% extends 'base.html' %}
+{% import '_macros.html' as m %}
+{% block title %}Inventário{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><h1>Inventário e recompensas</h1><p class="muted">{{ current_campaign.name }} · ferramenta de organização do mestre.</p></div>
+  <a class="btn btn--primary" href="{{ url_for('items.new') }}">{{ m.icon('plus', 16) }} Novo item</a>
+</div>
+<form class="filters card" method="get">
+  <div class="field"><label class="field__label" for="q">Buscar</label><input id="q" name="q" value="{{ q }}" placeholder="Nome ou descrição"></div>
+  <div class="field"><label class="field__label" for="categoria">Categoria</label>
+    <select id="categoria" name="categoria" data-autosubmit><option value="">Todas</option>
+      {% for k, l in choices.item_categories %}<option value="{{ k }}" {% if category == k %}selected{% endif %}>{{ l }}</option>{% endfor %}
+    </select></div>
+  <div class="field"><label class="field__label" for="personagem">Possuidor</label>
+    <select id="personagem" name="personagem" data-autosubmit><option value="">Todos</option>
+      {% for c in characters %}<option value="{{ c.id }}" {% if character_id == c.id %}selected{% endif %}>{{ c.name }}</option>{% endfor %}
+    </select></div>
+  {{ m.filter_actions(url_for('items.index')) }}
+</form>
+{% if items %}
+<div class="card table-wrap">
+  <table class="table table--stack">
+    <thead><tr><th>Item</th><th>Categoria</th><th>Quantidade</th><th>Com quem</th></tr></thead>
+    <tbody>
+    {% for i in items %}
+      <tr>
+        <td data-label="Item"><a href="{{ url_for('items.detail', item_id=i.id) }}">{{ i.name }}</a></td>
+        <td data-label="Categoria">{{ rotulo('item_categories', i.category) }}</td>
+        <td data-label="Quantidade">{{ i.total_quantity }}</td>
+        <td data-label="Com quem">{% for h in i.holdings %}{{ h.character.name }} (×{{ h.quantity }}){% if not loop.last %}, {% endif %}{% else %}<span class="muted">Sem dono</span>{% endfor %}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% elif q or category or character_id %}
+  {{ m.empty('Nenhum item encontrado', 'Ajuste ou limpe os filtros.') }}
+{% else %}
+  {{ m.empty('Nenhum item registrado', 'Registre moedas, tesouros, equipamentos e itens especiais.', url_for('items.new'), 'Registrar item') }}
+{% endif %}
+{% endblock %}

@@ -1,0 +1,24 @@
+{% extends 'base.html' %}
+{% import '_macros.html' as m %}
+{% block title %}{{ title }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <a class="back-link" href="{{ back_url }}">{{ m.icon('back', 16) }} Voltar</a>
+    <h1>{{ title }}</h1>
+    {% if intro %}<p class="muted">{{ intro }}</p>{% endif %}
+  </div>
+</div>
+<form method="post" class="card form" novalidate {% if multipart %}enctype="multipart/form-data"{% endif %} data-loading-form>
+  {{ form.hidden_tag() }}
+  <div class="form__grid">
+    {% for f in form if f.type not in ['CSRFTokenField', 'HiddenField'] %}
+      {{ m.field(f) }}
+    {% endfor %}
+  </div>
+  <div class="form__actions">
+    <button type="submit" class="btn btn--primary" data-loading-text="Salvando…">{{ m.icon('check', 16) }} Salvar</button>
+    <a class="btn btn--ghost" href="{{ back_url }}">Cancelar</a>
+  </div>
+</form>
+{% endblock %}

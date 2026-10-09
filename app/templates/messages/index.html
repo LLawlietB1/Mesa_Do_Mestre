@@ -1,0 +1,34 @@
+{% extends 'base.html' %}
+{% import '_macros.html' as m %}
+{% block title %}Mensagens{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><h1>Mensagens aos jogadores</h1><p class="muted">{{ current_campaign.name }} · envie dados da campanha por WhatsApp ou SMS.</p></div>
+</div>
+
+<section class="card">
+  <p class="muted">As mensagens usam <strong>apenas dados públicos</strong> (ficha resumida, XP, inventário, sessões, missões). Notas privadas, segredos e observações do mestre <strong>nunca</strong> entram no texto. Você revisa e edita cada mensagem antes de enviar.</p>
+  <form method="post" action="{{ url_for('messages.preview') }}" class="stack-form" novalidate data-loading-form>
+    {{ form.hidden_tag() }}
+    <div class="form__grid">
+      {{ m.field(form.kind) }}
+      {{ m.field(form.extra, full=true) }}
+    </div>
+    <div class="field field--full">
+      <span class="field__label">Destinatários</span>
+      <div class="checklist">
+        {% for p in players %}
+          {% if sendable(p) %}
+            <label class="check"><input type="checkbox" name="recipients" value="{{ p.id }}" {% if p.id in (form.recipients.data or []) %}checked{% endif %}> <span>{{ p.display_name }} <span class="muted">{{ p.phone }}</span></span></label>
+          {% else %}
+            <span class="check muted" title="Cadastre o telefone e marque o consentimento no perfil do jogador">
+              <input type="checkbox" disabled> <span>{{ p.display_name }} — <a href="{{ url_for('players.edit', player_id=p.id) }}">{{ 'sem consentimento' if p.phone else 'sem telefone' }}</a></span></span>
+          {% endif %}
+        {% else %}<span class="muted">Nenhum jogador ativo nesta campanha.</span>{% endfor %}
+      </div>
+      {% for e in form.recipients.errors %}<small class="field__error">{{ e }}</small>{% endfor %}
+    </div>
+    <button class="btn btn--primary" type="submit" data-loading-text="Montando…">{{ m.icon('send', 16) }} Gerar prévia</button>
+  </form>
+</section>
+{% endblock %}

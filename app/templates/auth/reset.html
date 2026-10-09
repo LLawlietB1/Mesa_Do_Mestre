@@ -1,0 +1,16 @@
+{% extends 'auth/base.html' %}
+{% import '_macros.html' as m %}
+{% block title %}Redefinir senha{% endblock %}
+{% block body %}
+<h2>Esqueci minha senha</h2>
+<p class="muted">Informe seu e-mail e a palavra-chave de recuperação definida no cadastro. Sem ela não é possível recuperar a conta.</p>
+<form method="post" class="stack-form" novalidate data-loading-form>
+  {{ form.hidden_tag() }}
+  {{ m.field(form.email, full=true) }}
+  {{ m.field(form.passphrase, full=true) }}
+  {{ m.field(form.password, full=true) }}
+  {{ m.field(form.confirm, full=true) }}
+  <button class="btn btn--primary" type="submit" data-loading-text="Redefinindo…">Redefinir senha</button>
+</form>
+<p class="auth__links"><a href="{{ url_for('auth.login') }}">Voltar para o login</a></p>
+{% endblock %}

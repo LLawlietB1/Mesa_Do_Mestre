@@ -1,0 +1,42 @@
+{% extends 'base.html' %}
+{% import '_macros.html' as m %}
+{% block title %}Campanhas{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>Campanhas</h1>
+  <a class="btn btn--primary" href="{{ url_for('campaigns.new') }}">{{ m.icon('plus', 16) }} Nova campanha</a>
+</div>
+<form class="filters card" method="get">
+  <div class="field"><label class="field__label" for="q">Buscar</label><input id="q" name="q" value="{{ q }}" placeholder="Nome da campanha"></div>
+  <div class="field"><label class="field__label" for="status">Status</label>
+    <select id="status" name="status"><option value="">Todos</option>
+      {% for k, l in choices.campaign_status %}<option value="{{ k }}" {% if status == k %}selected{% endif %}>{{ l }}</option>{% endfor %}
+    </select></div>
+  {{ m.filter_actions(url_for('campaigns.index')) }}
+</form>
+{% if campaigns %}
+<div class="grid grid--cards">
+  {% for c in campaigns %}
+  <article class="card campaign-card{% if c.is_closed %} is-closed{% endif %}">
+    {% if c.cover_image %}<img class="campaign-card__cover" src="{{ url_for('media.serve', filename=c.cover_image) }}" alt="" loading="lazy">{% endif %}
+    <div class="campaign-card__body">
+      <h3><a href="{{ url_for('campaigns.detail', campaign_id=c.id) }}">{{ c.name }}</a></h3>
+      <p>{{ m.badge('campaign_status', c.status) }} {% if current_campaign and current_campaign.id == c.id %}<span class="badge badge--ativa">Selecionada</span>{% endif %}</p>
+      <p class="muted">{{ [c.system, c.setting] | select | join(' · ') or '—' }}</p>
+      <p class="muted">{{ char_counts.get(c.id, 0) }} personagem(ns){% if c.start_date %} · desde {{ c.start_date | data }}{% endif %}</p>
+    </div>
+    <div class="card__foot">
+      {% if not current_campaign or current_campaign.id != c.id %}
+        {{ m.post_button(url_for('campaigns.select'), 'Selecionar', fields={'campaign_id': c.id}, cls='btn btn--sm btn--primary') }}
+      {% endif %}
+      <a class="btn btn--sm btn--ghost" href="{{ url_for('campaigns.detail', campaign_id=c.id) }}">Detalhes</a>
+    </div>
+  </article>
+  {% endfor %}
+</div>
+{% elif q or status %}
+  {{ m.empty('Nada encontrado', 'Nenhuma campanha corresponde aos filtros.') }}
+{% else %}
+  {{ m.empty('Nenhuma campanha ainda', 'Crie sua primeira campanha para começar.', url_for('campaigns.new'), 'Criar campanha') }}
+{% endif %}
+{% endblock %}

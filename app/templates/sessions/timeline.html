@@ -1,0 +1,27 @@
+{% extends 'base.html' %}
+{% import '_macros.html' as m %}
+{% block title %}Linha do tempo{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <a class="back-link" href="{{ url_for('sessions.index') }}">{{ m.icon('back', 16) }} Sessões</a>
+    <h1>Linha do tempo</h1><p class="muted">{{ current_campaign.name }}</p>
+  </div>
+</div>
+{% if sessions %}
+<ol class="timeline">
+  {% for s in sessions %}
+  <li class="timeline__item{% if s.date > today or s.status == 'agendada' %} is-future{% endif %}">
+    <div class="timeline__date">{{ s.date | data }}{% if s.status == 'agendada' and s.date >= today %}<br><span class="badge badge--agendada">Futura</span>{% endif %}</div>
+    <div class="card">
+      <h3><a href="{{ url_for('sessions.detail', session_id=s.id) }}">Sessão {{ s.number }} — {{ s.title }}</a></h3>
+      {% if s.summary %}<p>{{ s.summary | truncate(220) }}</p>{% endif %}
+      {% if s.events %}<ul>{% for e in s.events %}<li>{{ e.description | truncate(140) }}{% if e.character %} <span class="muted">({{ e.character.name }})</span>{% endif %}</li>{% endfor %}</ul>{% endif %}
+    </div>
+  </li>
+  {% endfor %}
+</ol>
+{% else %}
+  {{ m.empty('Linha do tempo vazia', 'As sessões e seus acontecimentos aparecerão aqui em ordem cronológica.', url_for('sessions.new'), 'Registrar sessão') }}
+{% endif %}
+{% endblock %}

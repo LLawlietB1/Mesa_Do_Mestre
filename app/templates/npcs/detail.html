@@ -1,0 +1,45 @@
+{% extends 'base.html' %}
+{% import '_macros.html' as m %}
+{% block title %}{{ npc.name }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div class="row">
+    {{ m.avatar(npc.image, npc.name, 'xl') }}
+    <div>
+      <a class="back-link" href="{{ url_for('npcs.index') }}">{{ m.icon('back', 16) }} NPCs</a>
+      <h1>{{ npc.name }} {{ m.badge('npc_status', npc.status) }}</h1>
+      <p class="muted">{{ npc.nickname or '' }} {% if npc.nickname %}·{% endif %} {{ npc.campaign.name }}</p>
+    </div>
+  </div>
+  <div class="page-head__actions">
+    <a class="btn" href="{{ url_for('npcs.edit', npc_id=npc.id) }}">{{ m.icon('edit', 16) }} Editar</a>
+    {{ m.post_button(url_for('npcs.delete', npc_id=npc.id), 'Excluir', confirm='Excluir o NPC ' ~ npc.name ~ '?', cls='btn btn--danger', icon_name='trash') }}
+  </div>
+</div>
+
+{% for title, text in [('Descrição', npc.description), ('Aparência', npc.appearance), ('Personalidade', npc.personality), ('Objetivos', npc.goals), ('Motivação', npc.motivation), ('Segredos', npc.secrets), ('Observações privadas', npc.master_notes)] if text %}
+  <section class="card"><h2>{{ title }}</h2><p>{{ text | texto }}</p></section>
+{% endfor %}
+
+<section class="card">
+  <h2>Relações com personagens</h2>
+  {% for r in npc.relationships %}
+    <div class="list-row">
+      <span><a href="{{ url_for('characters.detail', character_id=r.character_id) }}">{{ r.character.name }}</a> <span class="badge">{{ rotulo('npc_relations', r.kind) }}</span> {{ r.description or '' }}</span>
+      {{ m.post_button(url_for('npcs.delete_relationship', npc_id=npc.id, rel_id=r.id), '', confirm='Remover esta relação?', icon_name='trash', title='Remover relação') }}
+    </div>
+  {% else %}<p class="muted">Nenhuma relação registrada.</p>{% endfor %}
+  <form method="post" action="{{ url_for('npcs.add_relationship', npc_id=npc.id) }}" class="stack-form form__grid" data-loading-form>
+    {{ rel_form.hidden_tag() }}
+    {{ m.field(rel_form.character_id) }}{{ m.field(rel_form.kind) }}{{ m.field(rel_form.description, full=true) }}
+    <div class="field--full"><button class="btn btn--primary btn--sm" type="submit">{{ m.icon('plus', 14) }} Registrar relação</button></div>
+  </form>
+</section>
+
+<div class="two-col">
+  <section class="card"><h2>Aparições em sessões</h2>
+    {% for s in sessions %}<a class="list-row" href="{{ url_for('sessions.detail', session_id=s.id) }}"><span>Sessão {{ s.number }} — {{ s.title }}</span><span class="muted">{{ s.date | data }}</span></a>{% else %}<p class="muted">Ainda não apareceu em sessões.</p>{% endfor %}</section>
+  <section class="card"><h2>Missões</h2>
+    {% for q in quests %}<a class="list-row" href="{{ url_for('quests.detail', quest_id=q.id) }}"><span>{{ q.title }}</span>{{ m.badge('quest_status', q.status) }}</a>{% else %}<p class="muted">Nenhuma missão ligada.</p>{% endfor %}</section>
+</div>
+{% endblock %}

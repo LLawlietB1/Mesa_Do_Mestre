@@ -1,0 +1,33 @@
+{% import '_macros.html' as m %}
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Entrar{% endblock %} · Mesa do Mestre</title>
+  <link rel="icon" href="{{ url_for('static', filename='images/favicon.svg') }}" type="image/svg+xml">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/polish.css') }}">
+  <script src="{{ url_for('static', filename='js/app.js') }}" defer></script>
+</head>
+<body class="auth-body">
+<main class="auth" id="conteudo">
+  <div class="auth__brand">
+    <img src="{{ url_for('static', filename='images/favicon.svg') }}" width="56" height="56" alt="">
+    <h1>Mesa do Mestre</h1>
+    <p class="muted">Campanhas, jogadores, XP e sessões em um só lugar.</p>
+  </div>
+  <div class="card auth__card">
+    <div class="toasts" aria-live="polite">
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% for category, message in messages %}
+          <div class="toast toast--{{ category }}" role="{{ 'alert' if category == 'error' else 'status' }}"><span>{{ message }}</span>
+            <button type="button" class="toast__close" data-toast-close aria-label="Fechar">{{ m.icon('close', 16) }}</button></div>
+        {% endfor %}
+      {% endwith %}
+    </div>
+    {% block body %}{% endblock %}
+  </div>
+</main>
+</body>
+</html>

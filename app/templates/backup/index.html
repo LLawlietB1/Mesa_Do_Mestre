@@ -1,0 +1,28 @@
+{% extends 'base.html' %}
+{% import '_macros.html' as m %}
+{% block title %}Backup{% endblock %}
+{% block content %}
+<div class="page-head"><div><h1>Backup e restauração</h1><p class="muted">Cobre somente os dados da sua conta: campanhas, jogadores, personagens, notas, sessões, NPCs, missões, itens e imagens.</p></div></div>
+
+<div class="two-col">
+  <section class="card">
+    <h2>Baixar backup</h2>
+    <p class="muted">Gera um arquivo .zip com tudo da sua conta. Guarde-o em um lugar seguro: ele contém seus dados e os dos jogadores (inclusive telefones).</p>
+    <form method="post" action="{{ url_for('backup.download') }}" class="stack-form">
+      {{ backup_form.hidden_tag() }}
+      <button class="btn btn--primary" type="submit">{{ m.icon('backup', 16) }} Baixar backup agora</button>
+    </form>
+  </section>
+
+  <section class="card danger-zone">
+    <h2>Restaurar backup</h2>
+    <p class="muted">O arquivo é validado antes de qualquer alteração e a troca é feita numa única transação: se algo falhar, nada muda. Só os <strong>seus</strong> dados são substituídos. <strong>Baixe um backup atual antes.</strong></p>
+    <form method="post" action="{{ url_for('backup.restore') }}" enctype="multipart/form-data" class="stack-form" data-confirm="Restaurar este backup substituirá TODOS os seus dados atuais. Continuar?" data-loading-form>
+      {{ restore_form.hidden_tag() }}
+      {{ m.field(restore_form.backup_file, full=true) }}
+      {{ m.field(restore_form.confirm, full=true) }}
+      <button class="btn btn--danger" type="submit" data-loading-text="Restaurando…">Restaurar backup</button>
+    </form>
+  </section>
+</div>
+{% endblock %}

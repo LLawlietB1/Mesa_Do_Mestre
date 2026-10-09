@@ -1,0 +1,46 @@
+{% extends 'base.html' %}
+{% import '_macros.html' as m %}
+{% block title %}Sessão {{ session.number }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <a class="back-link" href="{{ url_for('sessions.index') }}">{{ m.icon('back', 16) }} Sessões</a>
+    <h1>Sessão {{ session.number }} — {{ session.title }} {{ m.badge('session_status', session.status) }}</h1>
+    <p class="muted">{{ session.date | data }} · {{ session.campaign.name }}</p>
+  </div>
+  <div class="page-head__actions">
+    <a class="btn" href="{{ url_for('sessions.edit', session_id=session.id) }}">{{ m.icon('edit', 16) }} Editar</a>
+    {{ m.post_button(url_for('sessions.delete', session_id=session.id), 'Excluir', confirm='Excluir a sessão ' ~ session.number ~ ' e seus acontecimentos?', cls='btn btn--danger', icon_name='trash') }}
+  </div>
+</div>
+
+{% if session.summary %}<section class="card"><h2>Resumo</h2><p>{{ session.summary | texto }}</p></section>{% endif %}
+
+<section class="card">
+  <h2>Acontecimentos importantes</h2>
+  {% for e in session.events %}
+    <div class="list-row">
+      <span>{{ e.description | texto }}{% if e.character %} <span class="badge">{{ e.character.name }}</span>{% endif %}</span>
+      {{ m.post_button(url_for('sessions.delete_event', session_id=session.id, event_id=e.id), '', confirm='Remover este acontecimento?', icon_name='trash', title='Remover acontecimento') }}
+    </div>
+  {% else %}<p class="muted">Nenhum acontecimento registrado.</p>{% endfor %}
+  <form method="post" action="{{ url_for('sessions.add_event', session_id=session.id) }}" class="stack-form" data-loading-form>
+    {{ event_form.hidden_tag() }}
+    {{ m.field(event_form.description, full=true) }}
+    {{ m.field(event_form.character_id) }}
+    <button class="btn btn--primary btn--sm" type="submit" data-loading-text="Registrando…">{{ m.icon('plus', 14) }} Registrar acontecimento</button>
+  </form>
+</section>
+
+<div class="two-col">
+  <section class="card"><h2>Personagens participantes</h2>
+    {% for c in session.participants %}<a class="list-row" href="{{ url_for('characters.detail', character_id=c.id) }}">{{ c.name }}</a>{% else %}<p class="muted">Nenhum.</p>{% endfor %}</section>
+  <section class="card"><h2>NPCs envolvidos</h2>
+    {% for n in session.npcs %}<a class="list-row" href="{{ url_for('npcs.detail', npc_id=n.id) }}">{{ n.name }}</a>{% else %}<p class="muted">Nenhum.</p>{% endfor %}</section>
+  <section class="card"><h2>Missões relacionadas</h2>
+    {% for q in session.quests %}<a class="list-row" href="{{ url_for('quests.detail', quest_id=q.id) }}">{{ q.title }}</a>{% else %}<p class="muted">Nenhuma.</p>{% endfor %}</section>
+</div>
+
+{% if session.pending %}<section class="card"><h2>Pendências para a próxima sessão</h2><p>{{ session.pending | texto }}</p></section>{% endif %}
+{% if session.master_notes %}<section class="card"><h2>{{ m.icon('lock', 16) }} Observações privadas</h2><p>{{ session.master_notes | texto }}</p></section>{% endif %}
+{% endblock %}

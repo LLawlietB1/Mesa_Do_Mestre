@@ -1,0 +1,43 @@
+{% extends 'base.html' %}
+{% import '_macros.html' as m %}
+{% block title %}Minha conta{% endblock %}
+{% block content %}
+<div class="page-head"><div><h1>Minha conta</h1><p class="muted">{{ current_user.name }} · {{ current_user.email }}</p></div></div>
+
+<div class="two-col">
+  <section class="card">
+    <h2>Alterar senha</h2>
+    <form method="post" action="{{ url_for('auth.change_password') }}" class="stack-form" novalidate data-loading-form>
+      {{ pw_form.hidden_tag() }}
+      {{ m.field(pw_form.current, full=true) }}{{ m.field(pw_form.password, full=true) }}{{ m.field(pw_form.confirm, full=true) }}
+      <button class="btn btn--primary" type="submit">Alterar senha</button>
+    </form>
+  </section>
+  <section class="card">
+    <h2>Palavra-chave de recuperação</h2>
+    <p class="muted">Usada em «Esqueci minha senha». {{ 'Já definida.' if current_user.recovery_hash else 'Ainda não definida.' }}</p>
+    <form method="post" action="{{ url_for('auth.change_recovery') }}" class="stack-form" novalidate data-loading-form>
+      {{ rec_form.hidden_tag() }}
+      {{ m.field(rec_form.current, full=true) }}{{ m.field(rec_form.passphrase, full=true) }}
+      <button class="btn btn--primary" type="submit">Salvar palavra-chave</button>
+    </form>
+  </section>
+</div>
+
+<section class="card">
+  <h2>Sessões e mensagens</h2>
+  <p class="muted">{{ sessions }} sessão(ões) de login ativa(s).
+    Envio de mensagens pelo servidor: <strong>{{ 'liberado' if current_user.can_send_messages else 'não liberado (os links de WhatsApp/SMS funcionam normalmente)' }}</strong>.</p>
+  {{ m.post_button(url_for('auth.logout_all'), 'Sair de todos os dispositivos', confirm='Encerrar todas as sessões, inclusive esta?') }}
+</section>
+
+<section class="card danger-zone">
+  <h2>Excluir minha conta</h2>
+  <p class="muted">Apaga definitivamente todas as suas campanhas, jogadores, personagens, notas, imagens e demais dados. Considere baixar um <a href="{{ url_for('backup.index') }}">backup</a> antes.</p>
+  <form method="post" action="{{ url_for('auth.delete_account') }}" class="stack-form" novalidate data-confirm="Excluir DEFINITIVAMENTE sua conta e todos os seus dados? Esta ação não pode ser desfeita.">
+    {{ del_form.hidden_tag() }}
+    {{ m.field(del_form.current, full=true) }}{{ m.field(del_form.confirm_text, full=true) }}
+    <button class="btn btn--danger" type="submit">{{ m.icon('trash', 16) }} Excluir minha conta</button>
+  </form>
+</section>
+{% endblock %}
