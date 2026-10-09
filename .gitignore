@@ -5,3 +5,6 @@ __pycache__/
 .pytest_cache/
 instance/*
 !instance/.gitkeep
+.env.*
+!.env.example
+.vercel/
