@@ -59,14 +59,14 @@ a:hover { text-decoration: underline; }
 .page-head__actions { display: flex; gap: .5rem; flex-wrap: wrap; }
 .back-link { display: inline-flex; align-items: center; gap: .25rem; font-size: .85rem; color: var(--text-2); margin-bottom: .25rem; }
 section { margin-bottom: 1.25rem; }
-.two-col { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.25rem; }
+.two-col { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(300px, 100%), 1fr)); gap: 1.25rem; margin-bottom: 1.25rem; }
 .two-col > section { margin-bottom: 0; }
-.stack { display: grid; gap: .75rem; }
+.stack { display: grid; gap: .75rem; margin-bottom: 1.25rem; }
 .row { display: flex; gap: .6rem; align-items: center; flex-wrap: wrap; }
 .row--between { justify-content: space-between; flex-wrap: nowrap; }
-.grid { display: grid; gap: 1rem; }
-.grid--cards { grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); }
-.grid--wide { grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); }
+.grid { display: grid; gap: 1rem; margin-bottom: 1.25rem; }
+.grid--cards { grid-template-columns: repeat(auto-fill, minmax(min(260px, 100%), 1fr)); }
+.grid--wide { grid-template-columns: repeat(auto-fill, minmax(min(340px, 100%), 1fr)); }
 
 /* Cards */
 .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 1rem 1.1rem; box-shadow: var(--shadow); }

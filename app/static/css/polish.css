@@ -190,3 +190,23 @@ input:focus, select:focus, textarea:focus { outline: none; box-shadow: 0 0 0 3px
 @media (hover: none) { .card::before { display: none; } .card { box-shadow: none; } }
 /* Listas longas: o navegador pula o desenho dos cartões fora da tela */
 .xp-list > .card, .stack > .card { content-visibility: auto; contain-intrinsic-size: auto 120px; }
+
+/* ---------- Celular: nada estoura a largura da tela ---------- */
+html { -webkit-text-size-adjust: 100%; }
+body { overflow-x: hidden; }
+img, video, canvas, svg { max-width: 100%; height: auto; }
+.card, .field, .list-row > *, .kv dd { min-width: 0; overflow-wrap: anywhere; }
+table { max-width: 100%; }
+.table-wrap, .table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+input, select, textarea { max-width: 100%; font-size: 16px; }   /* 16px evita o zoom automático do iOS */
+@media (max-width: 640px) {
+  .kv { grid-template-columns: 1fr; gap: 0; }
+  .kv dt { margin-top: .5rem; font-size: .8rem; }
+  .two-col { gap: 1rem; margin-bottom: 1rem; }
+  .card { padding: .85rem .9rem; }
+  .list-row { flex-wrap: wrap; }
+  .row--between { flex-wrap: wrap; }
+  .page-head h1 { font-size: 1.4rem; }
+  .btn { white-space: normal; }
+  .card__foot .btn, .card__foot .inline-form { flex: 1 1 auto; }
+}
