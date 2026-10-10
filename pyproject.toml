@@ -16,6 +16,3 @@ dependencies = [
   "psycopg[binary]==3.3.6",
   "Pillow==12.3.0",
 ]
-
-[tool.vercel]
-entrypoint = "run:app"

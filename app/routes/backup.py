@@ -5,7 +5,7 @@ from app.services import backup as backup_service
 from app.services.backup import BackupError
 
 bp = Blueprint("backup", __name__, url_prefix="/backup")
-MAX_DOWNLOAD = 4_200_000     # a Vercel limita a resposta de uma função a ~4,5 MB
+MAX_DOWNLOAD = 4_200_000     # tamanho máximo do .zip baixado
 
 
 @bp.get("/")

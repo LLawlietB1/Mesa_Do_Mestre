@@ -52,8 +52,8 @@ class UserSession(db.Model):
 
 
 class FileAsset(db.Model):
-    """Imagem enviada (retrato, capa, NPC). O conteúdo fica no Vercel Blob PRIVADO (`storage_url`, nunca exposta)
-    ou, sem Blob configurado (desenvolvimento local), no próprio banco (`data`). Servida só ao dono em /media/<id>."""
+    """Imagem enviada (retrato, capa, NPC). O conteúdo fica no próprio banco (`data`) e é servido só ao dono
+    em /media/<id>."""
 
     __tablename__ = "file_assets"
 
@@ -61,8 +61,7 @@ class FileAsset(db.Model):
     owner_id = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
     content_type = db.Column(db.String(40), nullable=False)
     size = db.Column(db.Integer, nullable=False)
-    data = db.deferred(db.Column(db.LargeBinary))                 # só quando não há Blob
-    storage_url = db.Column(db.String(600))                        # URL privada do blob (nunca vai ao navegador)
+    data = db.deferred(db.Column(db.LargeBinary, nullable=False))
     created_at = db.Column(db.DateTime, nullable=False, default=utcnow)
 
 

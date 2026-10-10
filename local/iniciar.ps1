@@ -1,4 +1,4 @@
-# Mesa do Mestre — versão LOCAL (sem Vercel, sem Neon, sem Blob, sem custo).
+# Mesa do Mestre — versão LOCAL (sem nuvem, sem custo).
 # Tudo fica nesta pasta: banco de dados e imagens em local\dados\.
 # Uso: dê dois cliques em iniciar.bat (ou rode este arquivo no PowerShell).
 $ErrorActionPreference = "Stop"
@@ -25,7 +25,6 @@ if (-not $depsOk) {
 # 2) Configuração 100% local (sobrepõe qualquer .env: nada de nuvem)
 $env:MESA_ENV = "development"
 $env:DATABASE_URL = "sqlite:///" + ($dados -replace "\\", "/") + "/mesa.sqlite3"
-$env:BLOB_READ_WRITE_TOKEN = ""        # imagens ficam no banco local
 $env:TWILIO_ACCOUNT_SID = ""           # sem envio pago de mensagens
 $env:RESEND_API_KEY = ""
 $keyFile = Join-Path $dados ".secret_key"

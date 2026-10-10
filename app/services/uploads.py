@@ -1,6 +1,6 @@
 """Upload seguro de imagens. As imagens são validadas, recodificadas (Pillow: remove EXIF/metadados,
 limita o tamanho) e guardadas NO BANCO (tabela file_assets), servidas só ao dono em /media/<id>.
-Guardar no banco evita disco (inexistente na Vercel), entra no backup e herda o isolamento por usuário."""
+Guardar no banco entra no backup e herda o isolamento por usuário."""
 from __future__ import annotations
 
 import io
@@ -12,7 +12,6 @@ from sqlalchemy import delete, func
 
 from app.extensions import db
 from app.models import FileAsset
-from app.services import blobstore
 
 ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg", "gif", "webp"}
 ALLOWED_FORMATS = {"PNG", "JPEG", "GIF", "WEBP"}
@@ -85,14 +84,7 @@ def save_image(storage) -> str:
         raise UploadError(f"Limite de armazenamento de imagens atingido ({quota // (1024 * 1024)} MB). Remova imagens antigas.")
     asset_id = uuid.uuid4().hex
     asset = FileAsset(id=asset_id, owner_id=g.user.id, content_type=ctype, size=len(data))
-    if blobstore.enabled():
-        try:
-            asset.storage_url = blobstore.put(f"img/{asset_id}.webp", data, ctype)
-        except blobstore.BlobError as exc:
-            raise UploadError(f"Não foi possível salvar a imagem: {exc} Tente novamente.") from None
-        g.setdefault("pending_blob", []).append(asset.storage_url)   # removido no fim da requisição se não for confirmado
-    else:
-        asset.data = data
+    asset.data = data
     db.session.add(asset)
     return asset.id
 
@@ -101,17 +93,12 @@ def delete_image(asset_id: str | None) -> None:
     """Remove a imagem do usuário atual (usado depois do commit da troca/exclusão)."""
     if not asset_id or not SAFE_NAME.match(asset_id):
         return
-    url = db.session.query(FileAsset.storage_url).filter(FileAsset.id == asset_id, FileAsset.owner_id == g.user.id).scalar()
     db.session.execute(delete(FileAsset).where(FileAsset.id == asset_id, FileAsset.owner_id == g.user.id))
     db.session.commit()
-    blobstore.delete([url])                       # só depois do commit: se falhar, no máximo sobra um arquivo órfão
 
 
 def read_asset(asset: FileAsset) -> tuple[bytes, str]:
-    """Conteúdo + content-type de uma imagem, venha do Blob ou do banco."""
-    if asset.storage_url:
-        body, _ = blobstore.fetch(asset.storage_url)
-        return body, asset.content_type
+    """Conteúdo + content-type de uma imagem."""
     return asset.data or b"", asset.content_type
 
 

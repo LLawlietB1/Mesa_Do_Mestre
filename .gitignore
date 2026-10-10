@@ -7,5 +7,4 @@ instance/*
 !instance/.gitkeep
 .env.*
 !.env.example
-.vercel/
 local/dados/

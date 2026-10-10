@@ -1,4 +1,4 @@
-"""Configuração para Postgres/Vercel."""
+"""Configuração (Postgres opcional, SQLite padrão)."""
 import pytest
 
 from config import engine_options, normalize_database_url
@@ -14,18 +14,19 @@ def test_normalize_database_url(raw, expected):
     assert normalize_database_url(raw) == expected
 
 
-def test_postgres_engine_options_are_serverless_safe():
+def test_postgres_engine_options_are_pooled_and_safe():
     opts = engine_options("postgresql+psycopg://u:p@h/db")
     assert opts["connect_args"]["prepare_threshold"] is None
     assert opts["pool_pre_ping"] is True and opts["pool_recycle"] < 300 and opts["pool_size"] >= 1
     assert engine_options("sqlite:///x.db") == {}
 
 
-def test_vercel_forces_production(monkeypatch):
+def test_env_name_comes_from_mesa_env(monkeypatch):
     from config import env_name
-    monkeypatch.setenv("VERCEL", "1")
-    monkeypatch.setenv("MESA_ENV", "development")
+    monkeypatch.setenv("MESA_ENV", "production")
     assert env_name() == "production"
+    monkeypatch.delenv("MESA_ENV")
+    assert env_name() == "development"
 
 
 def test_health_reports_missing_schema_and_ok(app, db, anon_client):
@@ -43,12 +44,11 @@ def test_missing_tables_show_helpful_message(app, db, anon_client):
 
 
 def test_pyproject_dependencies_match_requirements():
-    """A Vercel lê o pyproject.toml: as dependências precisam ser as mesmas do requirements.txt."""
+    """As dependências do pyproject.toml precisam ser as mesmas do requirements.txt."""
     import tomllib
     from pathlib import Path
     root = Path(__file__).resolve().parent.parent
     data = tomllib.loads((root / "pyproject.toml").read_text(encoding="utf-8"))
-    assert data["tool"]["vercel"]["entrypoint"] == "run:app"
     reqs = [l.strip() for l in (root / "requirements.txt").read_text(encoding="utf-8").splitlines() if l.strip() and not l.startswith("#")]
     assert sorted(data["project"]["dependencies"]) == sorted(reqs)
 

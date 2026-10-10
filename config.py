@@ -1,4 +1,4 @@
-"""Configuração da aplicação (desenvolvimento, produção/Vercel e testes)."""
+"""Configuração da aplicação (desenvolvimento, produção e testes)."""
 import os
 import secrets
 from pathlib import Path
@@ -12,7 +12,7 @@ def _sqlite_uri(path: Path) -> str:
 
 
 def normalize_database_url(url: str) -> str:
-    """Aceita postgres://, postgresql:// (Neon/Vercel) e converte para o driver psycopg 3."""
+    """Aceita postgres://, postgresql:// (Neon etc.) e converte para o driver psycopg 3."""
     if url.startswith("postgres://"):
         url = "postgresql://" + url[len("postgres://"):]
     if url.startswith("postgresql://"):
@@ -28,7 +28,7 @@ def database_url() -> str:
 def engine_options(url: str) -> dict:
     if url.startswith("postgresql"):
         return {
-            # Instâncias "quentes" da Vercel atendem várias requisições: reaproveitar a conexão evita o custo de
+            # Instâncias de longa duração atendem várias requisições: reaproveitar a conexão evita o custo de
             # TLS + autenticação (centenas de ms) em cada página. pre_ping/recycle descartam conexões que o
             # Neon suspendeu por inatividade.
             "pool_size": 1, "max_overflow": 2, "pool_pre_ping": True, "pool_recycle": 240,
@@ -50,9 +50,7 @@ def _load_dev_secret_key() -> str:
 
 
 def env_name() -> str:
-    """Na Vercel (variável VERCEL=1) o ambiente é sempre produção."""
-    if os.environ.get("VERCEL"):
-        return "production"
+    """Ambiente pela variável MESA_ENV (padrão: development)."""
     return os.environ.get("MESA_ENV", "development")
 
 
@@ -63,7 +61,7 @@ class Config:
     SESSION_COOKIE_HTTPONLY = True
     SESSION_COOKIE_SAMESITE = "Lax"
     WTF_CSRF_TIME_LIMIT = None
-    MAX_CONTENT_LENGTH = 4 * 1024 * 1024        # a Vercel limita o corpo de requisições a ~4,5 MB
+    MAX_CONTENT_LENGTH = 4 * 1024 * 1024        # corpo máximo de uma requisição
     MAX_IMAGE_BYTES = 3 * 1024 * 1024           # imagem enviada (é reduzida/recodificada ao salvar)
     USER_IMAGE_QUOTA_BYTES = int(os.environ.get("USER_IMAGE_QUOTA_MB", "3")) * 1024 * 1024
     SESSION_DAYS = 14
@@ -87,8 +85,6 @@ class Config:
     IMAGE_REQUEST_COOLDOWN_MIN = 30
     # A primeira conta de um banco vazio vira administradora (dona da instalação).
     FIRST_USER_IS_ADMIN = True
-    # Vercel Blob (arquivos privados). Criar um Blob store na aba Storage do projeto preenche esta variável.
-    BLOB_READ_WRITE_TOKEN = os.environ.get("BLOB_READ_WRITE_TOKEN", "")
 
     def __init__(self):
         url = database_url()
@@ -127,7 +123,6 @@ class TestingConfig(Config):
     INVITE_CODE = ""
     TWILIO_ACCOUNT_SID = TWILIO_AUTH_TOKEN = TWILIO_SMS_FROM = TWILIO_WHATSAPP_FROM = ""
     RESEND_API_KEY = ADMIN_EMAIL = ""
-    BLOB_READ_WRITE_TOKEN = ""
 
     def __init__(self):
         super().__init__()
